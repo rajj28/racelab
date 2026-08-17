@@ -1,0 +1,35 @@
+Does the result depend on the action space?
+========================================================================================
+  stale ceiling $80, current ceiling $60, hard limit $100
+  window 1000ms, 20 agents, 2 runs per cell
+  baseline options (45, 40, 35) make 45+35 = $80 exactly; these do not
+
+           options       C-ops sums           C sums   verdict
+      (37, 36, 24)         [74, 74]         [74, 37]   [PASS]
+      (50, 26, 23)         [76, 76]         [76, 50]   [PASS]
+      (27, 20, 17)         [74, 74]         [54, 54]   [PASS]
+      (45, 36, 28)         [73, 73]         [73, 73]   [PASS]
+      (51, 46, 17)         [68, 68]         [68, 51]   [PASS]
+      (43, 38, 24)         [67, 67]         [67, 43]   [PASS]
+      (51, 49, 25)         [76, 76]         [51, 76]   [PASS]
+
+========================================================================================
+C-ops final sums observed: [67, 68, 73, 74, 76]
+  distinct values: 5  (if this is 1, the number really is an artifact of one action space)
+  spread: min 67, max 76, stdev 3.4
+C final sums observed:     [37, 43, 50, 51, 54, 67, 68, 73, 74, 76]
+
+Policy-ceiling breaches (total > $60):
+  C-ops 14/14    C 7/14
+
+The mechanism holds across every action space drawn:
+  * C-ops fills to the ceiling it REMEMBERS ($80) and so breaches
+    the one in force ($60) -- at a different total each time.
+  * C never exceeds the highest ceiling ever in force, and is never
+    worse than C-ops on a matched run.
+  * C breaches the $60 ceiling far less often, but not never --
+    a commit made legally before the policy moved cannot be revoked.
+  * Neither ever breaks the hard limit of $100.
+
+So $80.00 was one instance, not the result. The result is the
+mechanism, and the number it lands on depends on the action space.

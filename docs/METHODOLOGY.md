@@ -1234,13 +1234,38 @@ The claim that survives is about the mechanism, not the number:
 > cap is and whatever the action space is.
 
 `scripts/test_action_space.py` draws random action spaces, deliberately off the
-multiple-of-5 grid that produces the tidy `80`, and requires four things per draw:
-C-ops lands above the ceiling in force, C-ops lands at or below the ceiling it
-remembered, C lands at or below the ceiling in force, and neither breaks the hard
-limit.
+multiple-of-5 grid that produces the tidy `80`.
 
-Seven draws, all passing. C-ops totals: `67, 68, 73, 74, 76` — five distinct
-values, stdev 3.4, none of them 80.
+Seven draws. C-ops totals: `67, 68, 73, 74, 76` — five distinct values, stdev
+3.4, none of them 80. C-ops landed above the ceiling in force and at or below the
+ceiling it remembered on every draw, and neither arm ever broke the hard limit.
+
+### The first version of this test asserted something we already knew was false
+
+It required, per run, that **C lands at or below the ceiling in force**. That
+failed on 4 of 7 draws, and the assertion was wrong rather than the arm.
+
+It contradicted Entry 11's own scope limit. At a 1000 ms window the policy update
+lands at 500 ms; an agent can commit legally under the stale `$80` ceiling before
+that, and once durable the write is not revocable because it was correct when it
+happened. C exceeding the current ceiling in a given run is therefore expected,
+and asserting otherwise was asserting against a result this project had already
+measured and published.
+
+The corrected assertions are what is actually claimable:
+
+- C-ops lands in `(current, stale]` — it fills to the cap it remembers
+- C never exceeds `stale` — never past the highest cap ever in force
+- C is never worse than C-ops on a matched run — refreshing cannot hurt
+- neither breaks the hard limit
+- **in aggregate**, C breaches the current ceiling less often than C-ops:
+  **7/14 against 14/14**
+
+Halved, not eliminated. The stronger per-run phrasing had been written into the
+README and into this entry before the test caught it, and both were corrected.
+Worth recording that the mistake was made *while adding a test to answer a
+review* — the direction of the error was toward a cleaner claim than the data
+supports, which is the direction to watch for.
 
 ### A second scenario, different along three axes
 

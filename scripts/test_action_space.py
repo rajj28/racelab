@@ -127,9 +127,29 @@ def main() -> int:
                 notes.append(f"C-ops did not exceed the current ceiling: {co}")
             if any(s > stale for s in co):
                 notes.append(f"C-ops went past the STALE ceiling too: {co}")
-            # C respected the current cap.
-            if any(s > current for s in cc):
-                notes.append(f"C exceeded the current ceiling: {cc}")
+            # C must never exceed the highest ceiling that was ever in force.
+            if any(s > stale for s in cc):
+                notes.append(f"C went past the stale ceiling: {cc}")
+            # Refreshing memory must never make the outcome worse, run for run.
+            for i, (a, b) in enumerate(zip(co, cc)):
+                if b > a:
+                    notes.append(f"run {i}: C ({b}) worse than C-ops ({a})")
+
+            # NOTE: there is deliberately no per-run assertion that C lands at or
+            # below the CURRENT ceiling, and the first version of this file had
+            # one. It failed on 4 of 7 draws, and it was the assertion that was
+            # wrong -- it contradicted a scope limit this project had already
+            # measured and documented ("No protocol can revoke a valid commit").
+            #
+            # At a 1000 ms window the policy update lands at 500 ms. An agent can
+            # legally commit a large amount under the stale $80 ceiling before
+            # that, and once it is durable nothing can revoke it: the write was
+            # correct when it happened. So C exceeding the current ceiling in a
+            # given run is expected behaviour, not a failure of memory refresh.
+            #
+            # The claim that memory refresh helps is therefore a RATE, checked in
+            # aggregate below, not a per-run guarantee. Asserting the guarantee
+            # would have been asserting something we already knew to be false.
 
             ok = not notes
             print(f"  {str(options):>16} {str(co):>16} {str(cc):>16}   "
@@ -152,6 +172,20 @@ def main() -> int:
     print(f"C final sums observed:     {sorted(set(c_sums))}")
     print()
 
+    # The ablation claim, as a rate. Per-run it cannot be a guarantee: an agent
+    # may commit legally under the stale ceiling before the policy moves, and
+    # that write is not revocable.
+    cops_breach = sum(1 for s in cops_sums if s > current)
+    c_breach = sum(1 for s in c_sums if s > current)
+    print(f"Policy-ceiling breaches (total > ${current}):")
+    print(f"  C-ops {cops_breach}/{len(cops_sums)}    C {c_breach}/{len(c_sums)}")
+    if c_breach >= cops_breach:
+        failures.append(
+            f"memory refresh did not reduce policy breaches: "
+            f"C {c_breach}/{len(c_sums)} vs C-ops {cops_breach}/{len(cops_sums)}"
+        )
+    print()
+
     if failures:
         print(f"{len(failures)} failure(s):")
         for f in failures:
@@ -163,7 +197,10 @@ def main() -> int:
     print("The mechanism holds across every action space drawn:")
     print(f"  * C-ops fills to the ceiling it REMEMBERS (${stale}) and so breaches")
     print(f"    the one in force (${current}) -- at a different total each time.")
-    print(f"  * C fills to the ceiling in force and stays within it.")
+    print(f"  * C never exceeds the highest ceiling ever in force, and is never")
+    print(f"    worse than C-ops on a matched run.")
+    print(f"  * C breaches the ${current} ceiling far less often, but not never --")
+    print(f"    a commit made legally before the policy moved cannot be revoked.")
     print(f"  * Neither ever breaks the hard limit of ${hard}.")
     print()
     print(f"So ${stale}.00 was one instance, not the result. The result is the")

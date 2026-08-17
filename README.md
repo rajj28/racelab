@@ -81,17 +81,38 @@ found. The controlled sweep already cracks it: C-ops means came in at
 So the claim is stated generally and tested that way. `scripts/test_action_space.py`
 draws random action spaces, deliberately off the multiple-of-5 grid:
 
-| options | C-ops final | C final |
+| options | C-ops finals | C finals |
 |---|---|---|
-| (37, 36, 24) | 74 | 37 |
-| (50, 26, 23) | 76 | 50 |
-| (27, 20, 17) | 74 | 54 |
-| (51, 46, 17) | 68 | 51 |
-| (43, 38, 24) | 67 | 43 |
+| (37, 36, 24) | 74, 74 | 74, 37 |
+| (50, 26, 23) | 76, 76 | 76, 50 |
+| (27, 20, 17) | 74, 74 | 54, 54 |
+| (45, 36, 28) | 73, 73 | 73, 73 |
+| (51, 46, 17) | 68, 68 | 68, 51 |
+| (43, 38, 24) | 67, 67 | 67, 43 |
+| (51, 49, 25) | 76, 76 | 51, 76 |
 
 Five distinct C-ops totals, none of them `80`. What holds across every draw:
-**C-ops fills to the ceiling it remembers, C fills to the ceiling in force, and
-neither ever breaks the hard limit.** `$80.00` was one instance of that mechanism.
+**C-ops fills to the ceiling it remembers**, C never exceeds the highest ceiling
+ever in force and is never worse than C-ops on a matched run, and neither ever
+breaks the hard limit. `$80.00` was one instance of that mechanism.
+
+**And a correction this test forced on us.** Its first version asserted that C
+lands at or below the ceiling *in force* on every run. That failed on 4 of 7
+draws — and the assertion was wrong, not the arm. It contradicted a scope limit
+this project had already measured and published:
+[no protocol can revoke a valid commit](#no-protocol-can-revoke-a-valid-commit).
+An agent can commit legally under the stale `$80` ceiling before the update lands,
+and that write is not revocable.
+
+So the memory-refresh claim is a **rate**, not a per-run guarantee:
+
+| | breaches of the `$60` ceiling |
+|---|---|
+| C-ops | **14 / 14** |
+| C | **7 / 14** |
+
+Halved, not eliminated. We had briefly written the stronger version into this
+README and into `docs/METHODOLOGY.md` Entry 16 before the test caught it.
 
 ### It reproduces in a second, different scenario
 
