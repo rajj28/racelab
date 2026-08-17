@@ -1,0 +1,45 @@
+{
+  "backend": "crdb",
+  "backend_label": "CockroachDB",
+  "isolation_requested": "SERIALIZABLE",
+  "isolation_reported": "serializable",
+  "workers": 2,
+  "gap_ms": 200,
+  "amount": 60,
+  "hard_limit": 100,
+  "final_sum": 60,
+  "invariant_violated": false,
+  "commits": 1,
+  "client_visible_40001": 1,
+  "deadlocks": 0,
+  "other_errors": 0,
+  "run_id": "gate-crdb-8ac840d9",
+  "server_version": "CockroachDB CCL v26.2.5 (x86_64-pc-linux-gnu, built 2026/07/28 18:56:00, go1.25.5)",
+  "wall_ms": 1922.1026000000165,
+  "worker_results": [
+    {
+      "agent_id": "agent-00",
+      "outcome": "committed",
+      "observed_sum": 0,
+      "amount": 60,
+      "isolation_reported": "serializable",
+      "error_code": null,
+      "error_stage": null,
+      "error_message": null,
+      "started_at": 1626.2448151,
+      "ended_at": 1626.7864872
+    },
+    {
+      "agent_id": "agent-01",
+      "outcome": "retryable_conflict",
+      "observed_sum": 0,
+      "amount": 60,
+      "isolation_reported": "serializable",
+      "error_code": "40001",
+      "error_stage": "commit",
+      "error_message": "restart transaction: TransactionRetryWithProtoRefreshError: TransactionRetryError: retry txn (RETRY_SERIALIZABLE - failed preemptive refresh due to encountered recently written committed value /Tenant/31998/Table/122/2/\"acct-gate\"/\"T\\aj\\xb7\\xdb!Ag\\x97\\x99\\x9c\\x92\\x88\\x0f\\x0e\\xd7\"/0 @1786712812.08072",
+      "started_at": 1626.244624,
+      "ended_at": 1626.8241956
+    }
+  ]
+}
