@@ -488,23 +488,52 @@ above.
 Everything runs from `python`. No `make` required — it is not present on a stock
 Windows install, and this project is developed and demonstrated on Windows.
 
+**A CockroachDB connection string is the only thing you actually need.**
+
 ```bash
 pip install -r requirements.txt
 cp .env.example .env               # CockroachDB DSN + AWS credentials
 
-python scripts/pg_portable.py init # PostgreSQL 16 control arm, no Docker
-
 python -m racelab.schema --backend crdb
-python -m racelab.schema --backend pg
 python scripts/seed.py --reset
 
 python scripts/test_all.py         # the whole suite
 ```
 
-`python scripts/test_all.py --skip-bedrock` runs the schema and wrapper suites
-only, and needs no AWS credentials at all. The schema suite runs first and
-against its own throwaway database, so it still means something when everything
-else is misconfigured.
+That runs the complete comparison, because **arm `A-rc` is the READ COMMITTED
+control on the same CockroachDB cluster.** CockroachDB v26.2 supports READ
+COMMITTED, so demonstrating what default isolation permits no longer requires a
+second database. It reproduces the anomaly severely — totals of 765, 675 and 360
+against a `$100` limit, with **zero** errors raised.
+
+### PostgreSQL is optional
+
+Arm `A` runs stock PostgreSQL 16 for a vendor-faithful control. It is worth
+having and it is not required:
+
+```bash
+docker compose up -d               # PostgreSQL 16, nothing tuned
+python -m racelab.schema --backend pg
+python scripts/run_sweep.py --arms A A-rc B C-ops C
+```
+
+Use Docker rather than `scripts/pg_portable.py` if you can. The portable
+binaries work, but they share the console process group, so a `Ctrl-C` anywhere
+in your session kills the server mid-run — we lost a sweep to exactly that,
+with `WAL writer process was terminated by exception 0xC000013A` in the log. The
+portable path remains as a fallback for machines without Docker.
+
+**Read arm A's numbers with care.** It is the only arm on a different database
+*and* a different network latency, and the sweep shows it is sensitive to the
+second: the same arm at the same seeds gave a mean of `196.0` on localhost
+binaries and `344.0` in Docker. `A-rc` exists because of that — same cluster,
+same latency, only the isolation level differs. See
+[the corrected comparison](#read-committed-versus-serializable-controlled-properly).
+
+`python scripts/test_all.py --skip-bedrock` runs the schema, wrapper and
+LangChain suites only, and needs no AWS credentials at all. The schema suite runs
+first and against its own throwaway database, so it still means something when
+everything else is misconfigured.
 
 **AWS needs two separate grants**, and they are easy to mistake for one: an IAM
 policy allowing `bedrock:InvokeModel`, **and**, for Anthropic models only, a

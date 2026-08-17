@@ -157,6 +157,10 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None,
     telemetry = ListTelemetry()
     lock = threading.Lock()
     started = threading.Event()
+    # Set only once the superseding policy is actually durable. A run whose
+    # ceiling never moved is not a weaker version of this experiment, it is a
+    # different one, so it must not be averaged into a cell.
+    policy_update_landed = threading.Event()
     results: list = []
 
     # Everything below is set up *before* the threads are released, because
@@ -273,14 +277,35 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None,
         started.wait()
         time.sleep(config.arrival_window_ms * config.policy_update_at / 1000.0)
         seed_mem = sc.update_memory
-        MemoryStore(updater_conn, embedder).add(
-            memory_id=seed_mem.memory_id,
-            account_id=sc.account_id,
-            text=seed_mem.text,
-            kind=seed_mem.kind,
-            supersedes=seed_mem.supersedes,
-            created_at=datetime.datetime.now(datetime.timezone.utc),
-        )
+        # If this write fails the run is not merely degraded, it is measuring
+        # something else entirely: the ceiling never moves, so arm C has nothing
+        # to refresh *to* and becomes indistinguishable from C-ops. That would
+        # quietly shrink the very gap the ablation reports.
+        #
+        # A transient `server closed the connection unexpectedly` from Cloud is
+        # exactly how this happened, and it printed a thread traceback while the
+        # sweep carried on and folded the ruined run into the cell mean. So the
+        # failure now voids the run, and `summarize()` already excludes voided
+        # runs from every reported number.
+        try:
+            MemoryStore(updater_conn, embedder).add(
+                memory_id=seed_mem.memory_id,
+                account_id=sc.account_id,
+                text=seed_mem.text,
+                kind=seed_mem.kind,
+                supersedes=seed_mem.supersedes,
+                created_at=datetime.datetime.now(datetime.timezone.utc),
+            )
+        except Exception as exc:  # noqa: BLE001 - voids the run, never silent
+            with lock:
+                outcome.voided = True
+                outcome.void_reason = (
+                    f"policy update failed, ceiling never changed: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+            return
+        with lock:
+            policy_update_landed.set()
         _notify("on_policy_update", at=time.perf_counter())
 
     threads = [threading.Thread(target=agent, args=(i, off))
@@ -293,6 +318,15 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None,
     started.set()
     for t in threads:
         t.join(timeout=120)
+
+    # Catches the case the try/except above cannot: the updater thread never got
+    # far enough to fail, or was still asleep when the agents all finished.
+    if not policy_update_landed.is_set() and not outcome.voided:
+        outcome.voided = True
+        outcome.void_reason = (
+            "policy update never landed; the ceiling stayed at the stale value "
+            "for the whole run"
+        )
 
     for conn in (*agent_conns, updater_conn):
         try:

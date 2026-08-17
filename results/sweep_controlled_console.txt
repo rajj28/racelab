@@ -3,11 +3,19 @@ windows: [400, 1000, 1500, 2500, 4000] ms | reasoning gap 200.0 ms
 reasoning provider: reference
 hard limit $100, ceiling $80 -> $60 mid-run
 
-  w=  400  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  344.0 conflicts    0 revisions    0
-  w=  400  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  561.5 conflicts    0 revisions    0
-  w=  400  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  238.5 conflicts  730 revisions    0
-  w=  400  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  209 revisions  148
-  w=  400  C · cockroach · full refresh                 limit   0/10  policy   0/10  mean sum   45.0 conflicts  117 revisions  117
+  w=  400  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  372.5 conflicts    0 revisions    0
+  w=  400  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  675.0 conflicts    0 revisions    0
+  w=  400  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  256.5 conflicts  667 revisions    0
+  w=  400  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  213 revisions  149
+  w=  400  C · cockroach · full refresh                 limit   0/10  policy   1/10  mean sum   48.5 conflicts  178 revisions  171
 
-  w= 1000  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  239.0 conflicts    0 revisions    0
-  w= 1000  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  321.5 conflicts    0 revisions    0
+  w= 1000  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  240.5 conflicts    0 revisions    0
+  w= 1000  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  296.5 conflicts    0 revisions    0
+  w= 1000  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  247.0 conflicts  397 revisions    0
+  w= 1000  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  162 revisions   98
+  w= 1000  C · cockroach · full refresh                 limit   0/10  policy   3/10  mean sum   55.5 conflicts   99 revisions   96
+
+  w= 1500  A · postgres RC · naive                      limit   9/10  policy  10/10  mean sum  263.0 conflicts    0 revisions    0
+  w= 1500  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  250.0 conflicts    0 revisions    0
+  w= 1500  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  246.0 conflicts  299 revisions    0
+  w= 1500  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  122 revisions   88
