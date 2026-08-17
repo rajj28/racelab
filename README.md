@@ -741,6 +741,8 @@ above.
 | `docs/GATE_RESULTS.md` | Phase 1 raw numbers and the exact transaction shape |
 | `docs/METHODOLOGY.md` | Every scenario parameter and change, logged before results |
 | `docs/MCP.md` | Inspecting the experiment through CockroachDB Cloud's own MCP server |
+| `docs/ARCHITECTURE.md` | How the pieces fit, and every failure path |
+| `deploy/` | Lambda gateway, IAM policy, signed client |
 
 ## Quickstart
 
