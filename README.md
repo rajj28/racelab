@@ -11,6 +11,13 @@ falsifiable hypothesis about what to do when that happens:
 > states than agents that retry the transaction while replaying the same
 > decision?
 
+![Two agents, one serialization failure, two final states: naive retry commits $110 against a $100 limit; conflict-aware re-reasons and commits $100](docs/demo.gif)
+
+*Every number in that animation comes back from a live CockroachDB cluster.
+`scripts/make_demo_gif.py` runs the forced-conflict case once per arm and renders
+the telemetry those runs produced — and refuses to write the file if the run did
+not actually demonstrate the divergence.*
+
 The answer turns out to have two parts, because the scenario has two constraints
 that fail for different reasons — one recoverable by re-reading state, one
 recoverable only by going back to memory. That distinction is the contribution.

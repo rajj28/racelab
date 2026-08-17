@@ -15,6 +15,11 @@ vendor/
 data/
 *.log
 
+# docs/demo.gif IS committed -- it is the first thing a judge sees, it is
+# generated from a real run, and a README whose lead image 404s is worse than
+# one without an image.
+!docs/demo.gif
+
 # Experiment outputs ARE committed. results/*.json holds the raw per-cell
 # aggregates that every table in the README and METHODOLOGY is rendered from,
 # and `scripts/render_sweep.py` regenerates the reports from them. Ignoring
