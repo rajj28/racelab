@@ -44,6 +44,12 @@ class Decision:
     rationale: str
     memory_ids: tuple[str, ...] = ()
     source: str = "reference"  # reference | model | cache
+    # How many times the model had to be re-asked because it answered outside
+    # the action space, and what it answered. Recorded rather than discarded:
+    # the tool schema's enum is not enforced by the API, and a rate of zero is a
+    # claim that has to be checked rather than assumed.
+    repairs: int = 0
+    rejected_actions: tuple[str, ...] = ()
 
     @property
     def is_abstain(self) -> bool:

@@ -32,6 +32,7 @@ from racelab.embeddings import get_embedder
 from racelab.experiment import RunConfig, Scenario, run_once, summarize
 from scenario.corpus import HERO
 from scenario.decide import RETRIEVAL_QUERY, infer_ceiling, propose
+from scenario.intents import IntentCache
 
 RESULTS = pathlib.Path(__file__).resolve().parents[1] / "results"
 
@@ -57,6 +58,29 @@ def reference_reason(memories, observed, hard_limit):
     return propose(ceiling, observed, hard_limit)
 
 
+def _make_cache_reason(cache: IntentCache):
+    """Replay a cached decision, keyed by the context the agent actually got.
+
+    The corpus state is *derived* from the retrieved memory ids rather than from
+    the clock: if the superseding policy is among them the lookup is `fresh`,
+    otherwise `stale`. So an agent whose refresh genuinely failed to surface the
+    new policy replays the stale decision, which is the honest answer rather
+    than the tidy one.
+
+    A miss raises. Stage 1 enumerates every reachable reading, so a miss means
+    the cache does not cover this arm's action space -- not that this reading is
+    exotic -- and falling back to the reference here would silently mix a
+    deterministic decision into a result labelled as the model's.
+    """
+    update_id = HERO.update[0].memory_id
+
+    def reason(memories, observed, hard_limit):
+        state = "fresh" if any(m.memory_id == update_id for m in memories) else "stale"
+        return cache.lookup(HERO.account_id, state, observed)
+
+    return reason
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="run the RaceLab sweep")
     ap.add_argument("--runs", type=int, default=20, help="runs per arm per window")
@@ -66,6 +90,8 @@ def main() -> int:
     ap.add_argument("--smoke", action="store_true", help="2 runs, 2 windows")
     ap.add_argument("--provider", default="reference",
                     help="reference | cache:<name>")
+    ap.add_argument("--arms", nargs="+", default=None,
+                    help="subset of arm ids to run, e.g. --arms C-ops C")
     ap.add_argument("--pool", type=int, default=6,
                     help="pooled connections for memory retrieval")
     ap.add_argument("--out", default="sweep.md",
@@ -75,9 +101,29 @@ def main() -> int:
     if args.smoke:
         args.runs, args.windows = 2, [400, 1500]
 
-    if args.provider != "reference":
-        print(f"provider {args.provider!r} is not wired yet; stage-1 generation "
-              f"requires Bedrock access to the Anthropic model.")
+    arms_to_run = [a for a in ORDER if a.value in args.arms] if args.arms else list(ORDER)
+    if not arms_to_run:
+        print(f"no arms matched {args.arms}; valid: {[a.value for a in ORDER]}",
+              file=sys.stderr)
+        return 2
+
+    if args.provider == "reference":
+        reason_for = reference_reason
+    elif args.provider.startswith("cache:"):
+        name = args.provider.split(":", 1)[1]
+        cache = IntentCache(name)
+        if not len(cache):
+            print(f"intent cache {name!r} is empty; run scripts/gen_intents.py first",
+                  file=sys.stderr)
+            return 2
+        # Refuses to let a reference-built cache be reported as a model result.
+        cache.require_provider(name)
+        reason_for = _make_cache_reason(cache)
+        print(f"replaying cached intents: {len(cache)} entries, "
+              f"kind {cache.meta.get('kind')!r}, model {cache.meta.get('model_id')}")
+    else:
+        print(f"unknown provider {args.provider!r}; expected 'reference' or "
+              f"'cache:<name>'", file=sys.stderr)
         return 2
 
     scenario = build_scenario()
@@ -113,7 +159,7 @@ def main() -> int:
     memory_pool = ConnectionPool("crdb", size=args.pool)
 
     for window in args.windows:
-        for arm_id in ORDER:
+        for arm_id in arms_to_run:
             arm = ARMS[arm_id]
             outcomes = []
             for i in range(args.runs):
@@ -123,7 +169,7 @@ def main() -> int:
                     reasoning_gap_ms=args.gap_ms,
                 )
                 outcomes.append(
-                    run_once(config, embedder, reference_reason, memory_pool)
+                    run_once(config, embedder, reason_for, memory_pool)
                 )
             summary = summarize(outcomes)
             cells[(window, arm_id)] = summary
@@ -250,7 +296,7 @@ def render(cells, args, scenario, elapsed) -> str:
         add("| Arm | Hard-limit violations | Policy breaches | Mean final sum | "
             "Conflicts | Revisions | Committed | Abstained |")
         add("|---|---|---|---|---|---|---|---|")
-        for arm_id in ORDER:
+        for arm_id in arms_to_run:
             s = cells[(window, arm_id)]
             add(f"| {ARMS[arm_id].label} | {s['hard_limit_violations']}/{s['runs']} "
                 f"| {s['policy_breaches']}/{s['runs']} | {s['mean_final_sum']:.1f} "

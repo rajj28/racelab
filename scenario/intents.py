@@ -110,6 +110,12 @@ class IntentCache:
             rationale=payload["rationale"],
             memory_ids=tuple(payload.get("memory_ids", ())),
             source="cache",
+            # Carried through so a replayed run can report how many of the cached
+            # decisions needed the model to be re-asked. Dropping it here would
+            # make the repair rate invisible in exactly the results that depend
+            # on those decisions.
+            repairs=int(payload.get("repairs", 0)),
+            rejected_actions=tuple(payload.get("rejected_actions", ())),
         )
 
     def require_provider(self, expected: str) -> None:

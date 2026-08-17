@@ -1,0 +1,875 @@
+{
+  "meta": {
+    "provider": "model",
+    "kind": "model",
+    "generated_at": "2026-08-17T08:56:42.798641+00:00",
+    "model_id": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "temperature": 0.0,
+    "accounts": {
+      "hero-001|stale": {
+        "hard_limit": 100,
+        "memory_ids": [
+          "hero-m1",
+          "hero-m2",
+          "hero-m3",
+          "hero-m4"
+        ],
+        "readings": 30
+      },
+      "hero-001|fresh": {
+        "hard_limit": 100,
+        "memory_ids": [
+          "hero-m5",
+          "hero-m2",
+          "hero-m3",
+          "hero-m4"
+        ],
+        "readings": 30
+      }
+    }
+  },
+  "entries": {
+    "hero-001|stale|0": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80 per billing cycle, and allocating $45 keeps the total at $45, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|5": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80 per billing cycle, and allocating $45 keeps the total at $50, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|10": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80 per billing cycle, and allocating $45 keeps the total at $55, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|15": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and allocating $45 keeps the total at $60, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|20": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and allocating $45 keeps the total at $65, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|25": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and allocating $45 keeps the total at $70, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|30": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and allocating $45 keeps the total at $75, which is within both the $80 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|35": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and allocating $45 would bring the total to $80 ($35 + $45), which stays within both the ceiling and the hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|40": {
+      "action": "allocate(40)",
+      "amount": 40,
+      "inferred_ceiling": 80,
+      "rationale": "The policy sets a temporary authorization ceiling of $80, and allocating $40 keeps the total at $80, which is within both the ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|45": {
+      "action": "allocate(35)",
+      "amount": 35,
+      "inferred_ceiling": 80,
+      "rationale": "The policy sets a temporary authorization ceiling of $80, and with $45 already allocated, I can allocate up to $35 more to stay within that ceiling.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|50": {
+      "action": "allocate(35)",
+      "amount": 35,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and with $50 already allocated, I can allocate up to $30 more to stay within that ceiling, so I choose the largest available option of $35 which would bring the total to $85, exceeding the $80 ceiling, therefore I allocate $35 is incorrect - I should allocate the amount that keeps total at or below $80, but since no option for $30 exists, I must choose between $35 (total $85, exceeds ceiling) or abstain; however, re-reading the options ",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|55": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and with $55 already allocated, no available allocation option (45, 40, or 35) would keep the total at or below $80.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|60": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and with $60 already allocated, no available allocation option (45, 40, or 35) would keep the total within the $80 ceiling.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|65": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and with $65 already allocated, no available allocation option (45, 40, or 35) would keep the total within the $80 ceiling.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|70": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $70 is already allocated, leaving only $10 available which is less than any allocation option.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|75": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $75 is already allocated, leaving only $5 available which is insufficient for any of the allocation options.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|80": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80 per billing cycle, and $80 has already been allocated, so no further allocation is possible within the ceiling.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|85": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80 per billing cycle, and $85 has already been allocated, exceeding this ceiling.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|90": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy sets a temporary authorization ceiling of $80, which has already been exceeded by the current allocation of $90, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|95": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, which has already been exceeded by the current allocation of $95, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|100": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, but $100 has already been allocated, exceeding both the ceiling and the hard limit of $100.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|105": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $105 has already been allocated, which exceeds both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|110": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, but $110 has already been allocated, exceeding both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|115": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, but $115 has already been allocated, exceeding both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|120": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, but $120 has already been allocated, exceeding both the ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|125": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, but $125 has already been allocated, exceeding both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|130": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $130 has already been allocated, which exceeds both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|135": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $135 has already been allocated, which exceeds both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|140": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $140 has already been allocated, which exceeds both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|stale|145": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 80,
+      "rationale": "The policy states a temporary authorization ceiling of $80, and $145 has already been allocated, which exceeds both the $80 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m1",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|0": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $45 keeps the total at $45, which is within both the $60 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|5": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $45 keeps the total at $50, which is within both the $60 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|10": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $45 keeps the total at $55, which is within both the $60 ceiling and the $100 hard limit.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|15": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $45 would bring the total to $60 ($15 + $45), which is within both the ceiling and the hard limit.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|20": {
+      "action": "allocate(40)",
+      "amount": 40,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $40 keeps the total at $60 ($20 + $40), which is within both the ceiling and the hard limit.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|25": {
+      "action": "allocate(35)",
+      "amount": 35,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $35 keeps the total at $60 ($25 + $35), which is within both the ceiling and the hard limit.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|30": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy ceiling is $60, and with $30 already allocated, all available options (35, 40, 45) would exceed the authorization ceiling of $60.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 1,
+      "rejected_actions": [
+        "allocate(30)"
+      ]
+    },
+    "hero-001|fresh|35": {
+      "action": "allocate(45)",
+      "amount": 45,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60 per billing cycle, and allocating $45 would bring the total to $80, which exceeds this ceiling.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|40": {
+      "action": "allocate(40)",
+      "amount": 40,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and with $40 already allocated, I can allocate up to $20 more, so I choose allocate(40) to reach the maximum allowed total of $60.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|45": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $45 has already been allocated, leaving no room for any of the available allocation options.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|50": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $50 has already been allocated, leaving only $10 available which is less than any allocatable option.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|55": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $55 has already been allocated, leaving only $5 available which is less than any allocation option.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|60": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The authorization ceiling is $60 per billing cycle and $60 has already been allocated, so no further allocation is possible without exceeding the policy ceiling.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|65": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $65 has already been allocated, exceeding this ceiling.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|70": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $70 has already been allocated, exceeding this ceiling.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|75": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $75 has already been allocated, exceeding this ceiling.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|80": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $80 has already been allocated, exceeding this ceiling, so no further allocation is permitted.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|85": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $85 has already been allocated, exceeding this ceiling, so no further allocation is permitted.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|90": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $90 has already been allocated, exceeding this ceiling, so no further allocation is permitted.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|95": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, and $95 has already been allocated, exceeding this ceiling, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|100": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60 per billing cycle, but $100 has already been allocated, exceeding both the ceiling and the hard limit of $100.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|105": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $105 has already been allocated, exceeding both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|110": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $110 has already been allocated, exceeding both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|115": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $115 has already been allocated, which exceeds both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|120": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60, but $120 has already been allocated, which exceeds both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|125": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $125 has already been allocated against a hard limit of $100, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|130": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $130 has already been allocated, which exceeds both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|135": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $135 has already been allocated, which exceeds both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|140": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy states an authorization ceiling of $60, but $140 has already been allocated, which exceeds both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    },
+    "hero-001|fresh|145": {
+      "action": "abstain",
+      "amount": null,
+      "inferred_ceiling": 60,
+      "rationale": "The policy sets an authorization ceiling of $60, but $145 has already been allocated, which exceeds both the $60 ceiling and the $100 hard limit, so no further allocation is possible.",
+      "memory_ids": [
+        "hero-m5",
+        "hero-m2",
+        "hero-m3",
+        "hero-m4"
+      ],
+      "repairs": 0,
+      "rejected_actions": []
+    }
+  }
+}
