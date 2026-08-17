@@ -1,0 +1,25 @@
+RaceLab sweep — 10 runs/arm/window, 20 agents/run
+windows: [400, 1000, 1500, 2500, 4000] ms | reasoning gap 200.0 ms
+reasoning provider: reference
+hard limit $100, ceiling $80 -> $60 mid-run
+
+Traceback (most recent call last):
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 397, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 172, in main
+    run_once(config, embedder, reason_for, memory_pool)
+  File "C:\Users\INDIA\racelab\racelab\experiment.py", line 148, in run_once
+    reset_run_state(config)
+  File "C:\Users\INDIA\racelab\racelab\experiment.py", line 122, in reset_run_state
+    with connect(config.arm.backend) as conn:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\INDIA\racelab\racelab\db.py", line 104, in connect
+    raise last  # type: ignore[misc]
+    ^^^^^^^^^^
+  File "C:\Users\INDIA\racelab\racelab\db.py", line 97, in connect
+    return psycopg.connect(
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\INDIA\AppData\Local\Programs\Python\Python312\Lib\site-packages\psycopg\connection.py", line 122, in connect
+    raise last_ex.with_traceback(None)
+psycopg.errors.ConnectionTimeout: connection timeout expired

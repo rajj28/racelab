@@ -55,6 +55,7 @@ from enum import Enum
 
 class ArmId(str, Enum):
     A = "A"
+    A_RC = "A-rc"
     B = "B"
     C_OPS = "C-ops"
     C = "C"
@@ -89,6 +90,20 @@ ARMS: dict[ArmId, Arm] = {
             "The control. READ COMMITTED permits the interleaving, so the "
             "conflict is never surfaced to the client and there is nothing to "
             "respond to."
+        ),
+    ),
+    ArmId.A_RC: Arm(
+        id=ArmId.A_RC,
+        backend="crdb",
+        isolation="READ COMMITTED",  # explicit; CockroachDB defaults to SERIALIZABLE
+        re_reason=False,
+        refresh_memory=False,
+        label="A-rc · cockroach RC · naive",
+        description=(
+            "The same control as A, with the database vendor held constant. Arm "
+            "A changes two things at once against B -- the isolation level and "
+            "the database -- so on its own it cannot say which one mattered. "
+            "This arm changes only the isolation level, on the same cluster."
         ),
     ),
     ArmId.B: Arm(
@@ -132,7 +147,7 @@ ARMS: dict[ArmId, Arm] = {
     ),
 }
 
-ORDER = [ArmId.A, ArmId.B, ArmId.C_OPS, ArmId.C]
+ORDER = [ArmId.A, ArmId.A_RC, ArmId.B, ArmId.C_OPS, ArmId.C]
 
 
 def contributions(by_arm: dict[ArmId, float]) -> dict[str, float | None]:
@@ -147,7 +162,12 @@ def contributions(by_arm: dict[ArmId, float]) -> dict[str, float | None]:
         return by_arm[later] - by_arm[earlier]
 
     return {
+        # Against arm A this confounds two changes -- isolation level AND
+        # database vendor. `..._same_vendor` is the clean version: same cluster,
+        # only the isolation level differs. Both are reported; where they
+        # disagree, the vendor-controlled one is the one to trust.
         "isolation_surfaces_conflict": delta(ArmId.B, ArmId.A),
+        "isolation_surfaces_conflict_same_vendor": delta(ArmId.B, ArmId.A_RC),
         "re_reasoning_over_fresh_operational_state": delta(ArmId.C_OPS, ArmId.B),
         "refreshing_semantic_memory": delta(ArmId.C, ArmId.C_OPS),
     }

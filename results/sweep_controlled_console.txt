@@ -1,0 +1,13 @@
+RaceLab sweep — 10 runs/arm/window, 20 agents/run
+windows: [400, 1000, 1500, 2500, 4000] ms | reasoning gap 200.0 ms
+reasoning provider: reference
+hard limit $100, ceiling $80 -> $60 mid-run
+
+  w=  400  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  344.0 conflicts    0 revisions    0
+  w=  400  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  561.5 conflicts    0 revisions    0
+  w=  400  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  238.5 conflicts  730 revisions    0
+  w=  400  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  209 revisions  148
+  w=  400  C · cockroach · full refresh                 limit   0/10  policy   0/10  mean sum   45.0 conflicts  117 revisions  117
+
+  w= 1000  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  239.0 conflicts    0 revisions    0
+  w= 1000  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  321.5 conflicts    0 revisions    0

@@ -32,6 +32,10 @@ SUITE = [
      "retrieval is index-backed, causal, and prefers current policy", True),
     ("arms", "test_arms.py",
      "four arms, and the ablation decomposed", True),
+    # Needs a live cluster but no Bedrock: the reasoning step is a
+    # RunnableLambda, so no embeddings or model calls are involved.
+    ("langchain", "test_langchain.py",
+     "the LangChain tool re-decides instead of replaying", False),
 ]
 
 
