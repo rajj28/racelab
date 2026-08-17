@@ -34,6 +34,30 @@ BACKENDS = {
 }
 
 
+def normalize_tls(dsn: str) -> str:
+    """Make a DSN's TLS settings usable on this machine.
+
+    Factored out of `resolve_dsn` so callers that obtain a DSN from somewhere
+    other than the environment -- AWS Secrets Manager, for instance -- get the
+    same treatment. The Lambda gateway hit this: it resolved a correct DSN and
+    then failed the handshake, because `sslrootcert=system` needs a trust store
+    the bundled OpenSSL cannot find on Windows.
+    """
+    if "sslmode=verify-full" not in dsn:
+        return dsn
+    if "sslrootcert=" in dsn and "sslrootcert=system" not in dsn:
+        return dsn
+    try:
+        import certifi
+    except ImportError:
+        return dsn
+    bundle = certifi.where()
+    if "sslrootcert=system" in dsn:
+        return dsn.replace("sslrootcert=system", f"sslrootcert={bundle}")
+    sep = "&" if "?" in dsn else "?"
+    return f"{dsn}{sep}sslrootcert={bundle}"
+
+
 def resolve_dsn(env_key: str) -> str:
     """Read a DSN from the environment and make its TLS settings usable.
 
@@ -48,21 +72,7 @@ def resolve_dsn(env_key: str) -> str:
     if not dsn:
         raise SystemExit(f"{env_key} is not set. Copy .env.example to .env and fill it in.")
 
-    if "sslmode=verify-full" not in dsn:
-        return dsn
-    if "sslrootcert=" in dsn and "sslrootcert=system" not in dsn:
-        return dsn
-
-    try:
-        import certifi
-    except ImportError:
-        return dsn
-
-    bundle = certifi.where()
-    if "sslrootcert=system" in dsn:
-        return dsn.replace("sslrootcert=system", f"sslrootcert={bundle}")
-    sep = "&" if "?" in dsn else "?"
-    return f"{dsn}{sep}sslrootcert={bundle}"
+    return normalize_tls(dsn)
 
 
 def dsn_for(backend: str) -> str:

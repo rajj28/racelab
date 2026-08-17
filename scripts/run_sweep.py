@@ -28,6 +28,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from racelab.arms import ARMS, ORDER, ArmId, contributions
 from racelab.db import ConnectionPool
+from racelab.integrations import ccloud
 from racelab.embeddings import get_embedder
 from racelab.experiment import RunConfig, Scenario, run_once, summarize
 from scenario.corpus import HERO
@@ -125,6 +126,26 @@ def main() -> int:
         print(f"unknown provider {args.provider!r}; expected 'reference' or "
               f"'cache:<name>'", file=sys.stderr)
         return 2
+
+    # Control-plane preflight, before a single agent starts. This exists because
+    # the first full sweep died mid-run on a connection ceiling that SQL could
+    # not have warned about (FEEDBACK entry 6). The agent now asks the control
+    # plane whether the concurrency it is about to create is sane for the plan.
+    #
+    # Advisory when ccloud is not authenticated, blocking when it is and says no:
+    # a repository that cannot be run without a control-plane session would be
+    # worse, but a session that reports a real problem should stop the run.
+    planned = args.agents + 1 + args.pool  # per-agent racing conns + updater + pool
+    try:
+        pf = ccloud.preflight(planned_connections=planned)
+        print(pf.explain())
+        if not pf.ok and pf.cluster_name is not None:
+            print("\npreflight refused the run. Reduce --agents/--pool or raise the "
+                  "cluster plan.", file=sys.stderr)
+            return 3
+    except ccloud.CcloudUnavailable as exc:
+        print(f"control-plane preflight skipped: {exc}")
+    print()
 
     scenario = build_scenario()
     embedder = get_embedder("titan")

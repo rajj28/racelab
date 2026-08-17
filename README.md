@@ -22,12 +22,13 @@ The answer turns out to have two parts, because the scenario has two constraints
 that fail for different reasons — one recoverable by re-reading state, one
 recoverable only by going back to memory. That distinction is the contribution.
 
-> **Status: under construction.** The library, the four arms, the test suite and
-> the swept experiment are complete. The model-backed agent is built and waiting
-> on Bedrock access to an Anthropic model; everything else runs today on Titan
-> embeddings. `docs/METHODOLOGY.md` carries the predictions that were written
-> down before the results, including the one that was falsified and the sweep we
-> discarded.
+> **What this is.** A conflict-aware transaction wrapper plus the benchmark that
+> is its evidence, deployed as a policy-enforcing write gateway for agent
+> decisions. Five arms, 250 runs, 5,000 agent decisions on a live CockroachDB
+> Cloud cluster, with the reasoning step run both as a deterministic reference
+> and as Claude Sonnet 4.5 on Bedrock. `docs/METHODOLOGY.md` carries every
+> prediction that was written down before the results — including the one that
+> was falsified, the headline we retracted, and the sweep we discarded.
 
 ---
 
@@ -179,6 +180,136 @@ true *after* it. That is what makes agent-level constraint enforcement possible 
 all.
 
 Run counts and the amended stopping rule are in `docs/METHODOLOGY.md` Entry 13.
+
+---
+
+## The stack, and what the agent actually does with each piece
+
+### CockroachDB tools
+
+**Distributed Vector Indexing — the agent's semantic memory.**
+Policies live as text in `memories`, embedded with Titan into a `VECTOR(1024)`
+column and indexed with `CREATE VECTOR INDEX … vector_cosine_ops`. The agent
+retrieves its authorization ceiling by semantic search before every decision, and
+again after every serialization failure. This is load-bearing, not decorative:
+arm C differs from arm C-ops *only* in whether that retrieval is re-run, and that
+single difference is what the experiment measures.
+
+We also found and fixed a real cost-model problem. A redundant `(account_id)`
+secondary index made the optimizer estimate 1 row for a 1,200-row span, so it
+preferred the ordinary index and the vector index went unused — silently, with no
+error and no plan warning. `scripts/verify_clean_clone.py` asserts on a fresh
+database that the vector index is chosen *unaided*, so the fix survives a clone.
+
+**Managed MCP Server — the experiment is queryable by another agent.**
+Rather than write an inspection server, we shaped the schema for the one
+CockroachDB already ships. `MCP_VIEWS` in `racelab/schema.py` adds four views
+designed around the server's documented limits: 10 KiB responses and a default
+`LIMIT 25`, so every view is narrow and **carries its own `ORDER BY`** — without
+it a bare `SELECT *` returns 25 arbitrary rows out of a thousand. Nothing depends
+on `crdb_internal`, which the server cannot reach.
+
+The ablation becomes one query:
+
+```sql
+SELECT arm, inferred_ceiling, count(*) FROM race_agent_decisions
+WHERE arm IS NOT NULL GROUP BY arm, inferred_ceiling ORDER BY arm;
+--  C-ops  80  31   <- reasoned with the withdrawn ceiling 31 times
+--  C      80   8   <- refreshing memory cut that to 8
+```
+
+Using the views taught us something about shaping schemas for agents:
+`race_agent_decisions` joins `arm` in, because the ids are `C` and `C-ops` and
+any attempt to derive the arm from the `run_id` string collapses the two and
+**silently merges the exact pair the ablation compares.** A view an agent must
+join correctly to avoid a wrong answer is a badly shaped view. `docs/MCP.md` has
+the config and the queries.
+
+**ccloud CLI — the control plane as an agent capability.**
+`racelab/integrations/ccloud.py` consults the control plane for the questions SQL
+cannot answer, and `scripts/run_sweep.py` calls it before launching a single
+agent.
+
+This exists because of a failure we hit. The first full sweep died with
+`connection timeout expired`, and we spent a while on TLS and latency before
+finding the real cause: 20 agents × (racing connection + memory connection) = 40
+concurrent connections, which Basic declines. The error did not say so. Now the
+swarm asks the plan what concurrency it supports and **refuses to start** rather
+than discovering it mid-run, and on repeated connect failures it asks whether the
+cluster is degraded or whether the fault is local — different incidents, opposite
+responses.
+
+Read-only by construction: an allowlist fixes the *verb* (`cluster info`,
+`cluster list`, `auth whoami`, `cluster regions`), so arguments can only
+parameterize a read. `create`, `delete` and `sql` are unreachable even if a caller
+asks for them, because an agent that can delete its own memory layer is a worse
+problem than any it was built to prevent. Every call uses `--output json`.
+
+**Agent Skills Repo — a contribution back.**
+`contrib/cockroachdb-skills/` holds
+`retrying-agent-decisions-under-contention`, written for
+`cockroachlabs/cockroachdb-skills` and validated at **0 errors** with the
+repository's own `scripts/validate-spec.py`.
+
+It exists because reading `designing-application-transactions` first showed that
+two pieces of its guidance are individually correct and, composed for an agent,
+produce a silent bug: step 14 says keep RPC calls *outside* the transaction
+(right), step 3 says retry the unit of work (right), and together they mean the
+model call sits outside the retried closure — so every retry re-submits a value
+the `40001` just proved stale. The new skill also tells readers **not** to use
+it, leading with that skill's step 5: if your rule fits in a `WHERE` clause, push
+it into SQL and stop reading.
+
+### AWS services
+
+**Amazon Bedrock — both halves of the agent.**
+Titan Text Embeddings V2 (`amazon.titan-embed-text-v2:0`, 1024-dim, normalized)
+for retrieval; Claude Sonnet 4.5 for the reasoning step, through `converse` with
+`toolConfig` and `toolChoice` forcing a tool so the action is strictly shaped.
+Two findings are written up in `docs/FEEDBACK.md` entry 7 — the tool schema's
+`enum` is **not** enforced, and a correction after a forced tool call must come
+back as a `toolResult` carrying the original `toolUseId`.
+
+**AWS Lambda — the write gateway.**
+`deploy/lambda_handler.py` is the workflow this becomes in production: agents do
+not write to the ledger, they ask the gateway to write for them. It reads state
+*and* policy inside one transaction, invokes the reasoning step, enforces the
+retrieved policy before the commit, and answers `200` with a committed decision
+or **`409` with the rule that stopped it**. A `409` is the case that is silent
+everywhere else.
+
+**AWS Secrets Manager — the database credential.**
+The DSN is the highest-value secret here: write access to the agent's memory.
+`resolve_dsn` prefers Secrets Manager, falls back to the environment, and
+**reports which it used** — a deployment that fell back silently would look
+healthy while running on a credential nobody can rotate.
+
+**Amazon CloudWatch — logs and the alarm that matters.**
+One JSON object per decision, carrying the run id, agent id, attempt number, the
+retrieved memory ids, and the constraint the agent believed it was under —
+without that last field you cannot distinguish "the model reasoned badly" from
+"the model reasoned correctly over a stale document", and those need opposite
+fixes. Four metrics, of which `ConstraintRefusals` is the interesting one:
+climbing means agents are proposing writes their own policy forbids, which the
+guardrail is currently absorbing. `HardLimitViolations` should be zero and has an
+alarm on it.
+
+**Amazon S3 — build artifacts.** The psycopg Lambda layer is uploaded to S3 and
+published from there.
+
+### Least privilege, written out
+
+The gateway's execution role gets four permissions and no more: read **one named
+secret**, invoke **two named models**, write its own log group, and publish
+metrics in **one namespace** (enforced by an IAM `Condition`, not by convention).
+Not `SecretsManagerReadWrite`, not `BedrockFullAccess`.
+
+`deploy/deploy.py` also sets **reserved concurrency**, which here is a correctness
+setting rather than a performance one: Lambda will happily run a thousand copies
+of the gateway, and a CockroachDB Basic cluster will not accept a thousand
+connections. Leaving it at the account default would let AWS exhaust the memory
+layer under load — the same lesson the ccloud preflight encodes, at the other end
+of the system.
 
 ---
 

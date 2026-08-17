@@ -1,0 +1,99 @@
+{
+  "Version": "2012-10-17",
+  "Comment": "Attach this to the IAM user that runs deploy/deploy.py. It is DEPLOYMENT permission, and is deliberately separate from the runtime role the Lambda itself gets, which is far narrower and is created by the deploy script.",
+  "Statement": [
+    {
+      "Sid": "CreateAndManageTheGatewayRole",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:DeleteRole",
+        "iam:PutRolePolicy",
+        "iam:GetRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:ListRoles",
+        "iam:PassRole"
+      ],
+      "Resource": "arn:aws:iam::*:role/racelab-gateway-role"
+    },
+    {
+      "Sid": "ManageTheGatewayFunction",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration",
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:DeleteFunction",
+        "lambda:AddPermission",
+        "lambda:RemovePermission",
+        "lambda:PutFunctionConcurrency",
+        "lambda:CreateFunctionUrlConfig",
+        "lambda:GetFunctionUrlConfig",
+        "lambda:UpdateFunctionUrlConfig",
+        "lambda:DeleteFunctionUrlConfig",
+        "lambda:InvokeFunction"
+      ],
+      "Resource": "arn:aws:lambda:*:*:function:racelab-gateway"
+    },
+    {
+      "Sid": "ListFunctionsForPreflightCheck",
+      "Effect": "Allow",
+      "Action": ["lambda:ListFunctions", "lambda:ListLayers"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageTheDsnSecret",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:DeleteSecret",
+        "secretsmanager:TagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:*:*:secret:racelab/*"
+    },
+    {
+      "Sid": "ListSecretsForPreflightCheck",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:ListSecrets"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "MetricsAndAlarmInOurNamespaceOnly",
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricAlarm",
+        "cloudwatch:DeleteAlarms",
+        "cloudwatch:DescribeAlarms",
+        "cloudwatch:ListMetrics",
+        "cloudwatch:GetMetricStatistics"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PublishOurOwnMetrics",
+      "Effect": "Allow",
+      "Action": ["cloudwatch:PutMetricData"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "cloudwatch:namespace": "RaceLab" } }
+    },
+    {
+      "Sid": "ReadTheGatewayLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:StartQuery",
+        "logs:GetQueryResults"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
