@@ -481,6 +481,7 @@ above.
 | `docs/VERIFIED.md` | Live-cluster verification, generated not asserted |
 | `docs/GATE_RESULTS.md` | Phase 1 raw numbers and the exact transaction shape |
 | `docs/METHODOLOGY.md` | Every scenario parameter and change, logged before results |
+| `docs/MCP.md` | Inspecting the experiment through CockroachDB Cloud's own MCP server |
 
 ## Quickstart
 

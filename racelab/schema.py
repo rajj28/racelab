@@ -219,6 +219,111 @@ MEMORIES_VECTOR_INDEX = (
     "ON memories (account_id, embedding vector_cosine_ops)"
 )
 
+# --------------------------------------------------------------------------
+# Views for inspection through the CockroachDB Cloud MCP Server
+# --------------------------------------------------------------------------
+
+MCP_VIEWS_NOTE = """\
+These views exist so this experiment can be inspected through CockroachDB
+Cloud's own **Managed MCP Server**, rather than through an inspection server we
+wrote ourselves. That server already exposes `select_query`, `explain_query`,
+`list_tables` and `get_table_schema`, so writing another one would have been
+duplication; what was missing was a schema shaped for an agent to query.
+
+Its documented limits are what these views are designed around, and they are
+real constraints rather than trivia:
+
+  * **Responses are capped at 10 KiB and SELECT defaults to `LIMIT 25`.** So
+    every view is narrow, and every view carries its own `ORDER BY`. Without the
+    ordering, an agent issuing a bare `SELECT * FROM v` would get 25 arbitrary
+    rows out of a thousand; with it, the 25 it gets are the 25 worth having.
+  * **`crdb_internal`, `system` and `pg_catalog` are not reachable**, and
+    `EXPLAIN ANALYZE` is unavailable. Nothing here depends on them: every number
+    is aggregated from our own telemetry tables.
+  * **Queries time out after 20 seconds**, so the aggregation is kept to grouped
+    scans over indexed columns.
+
+One thing a reader must not be misled about: **arm A does not appear in these
+views.** `_record_run` writes each run's row to the backend that ran it, and arm
+A runs on PostgreSQL by definition -- it is the control. So a CockroachDB-side
+view can compare B, C-ops and C, and the A comparison lives in
+`results/sweep_fixed.md`. Rather than silently omitting it, `race_arm_comparison`
+reports the arms it actually has.
+"""
+
+MCP_VIEWS = [
+    # Per-arm rollup. Three or four rows, so it survives the 10 KiB cap
+    # comfortably and is the right first query for an agent exploring blind.
+    """
+    CREATE VIEW IF NOT EXISTS race_arm_comparison AS
+    SELECT arm,
+           count(*)                                              AS runs,
+           sum(CASE WHEN invariant_violated THEN 1 ELSE 0 END)    AS runs_over_hard_limit,
+           round(avg(final_sum), 1)                              AS avg_final_sum,
+           max(final_sum)                                        AS worst_final_sum,
+           max(hard_limit)                                       AS hard_limit
+    FROM race_runs
+    GROUP BY arm
+    ORDER BY arm
+    """,
+    # One row per run, newest first: a bare SELECT returns the most recent 25.
+    """
+    CREATE VIEW IF NOT EXISTS race_run_summary AS
+    SELECT run_id,
+           arm,
+           seed,
+           agent_count,
+           final_sum,
+           hard_limit,
+           invariant_violated AS over_hard_limit,
+           ended_at
+    FROM race_runs
+    ORDER BY ended_at DESC NULLS LAST
+    """,
+    # The drill-down, and the view that carries the actual argument. Each row is
+    # one reasoning step: what the agent read from the database (`observed_sum`),
+    # what ceiling it inferred from retrieved memory (`inferred_ceiling`), and
+    # what it then chose. A row where those two disagree is the whole thesis in
+    # one line.
+    #
+    # `arm` is joined in rather than left to the caller. Found by using it: the
+    # arm ids are `C` and `C-ops`, so any attempt to derive the arm from the
+    # run_id string collapses the two into one and silently merges the exact
+    # pair the ablation compares. A view an agent has to join correctly in order
+    # to avoid a wrong answer is a badly shaped view.
+    """
+    CREATE VIEW IF NOT EXISTS race_agent_decisions AS
+    SELECT d.run_id,
+           r.arm,
+           d.agent_id,
+           d.attempt_no,
+           d.policy,
+           d.observed_sum,
+           d.inferred_ceiling,
+           d.proposed_amount,
+           d.observed_sum + COALESCE(d.proposed_amount, 0) AS resulting_total,
+           d.decision_after,
+           d.revised,
+           d.created_at
+    FROM decisions d
+    LEFT JOIN race_runs r ON r.run_id = d.run_id
+    ORDER BY d.created_at DESC, d.agent_id, d.attempt_no
+    """,
+    # Transaction conflict graph, aggregated per run. These are database
+    # dependency edges -- transaction A could not serialize against B's
+    # committed write. They are not claims that two agents disagreed.
+    """
+    CREATE VIEW IF NOT EXISTS race_conflict_summary AS
+    SELECT run_id,
+           conflict_type,
+           count(*) AS edges,
+           count(DISTINCT agent_a) AS agents_blocked
+    FROM conflict_edges
+    GROUP BY run_id, conflict_type
+    ORDER BY edges DESC
+    """,
+]
+
 DROP_ORDER = [
     "conflict_edges",
     "agent_attempts",
@@ -227,6 +332,14 @@ DROP_ORDER = [
     "allocations",
     "accounts",
     "memories",
+]
+
+# Views must be dropped before the tables they read from.
+VIEW_DROP_ORDER = [
+    "race_conflict_summary",
+    "race_agent_decisions",
+    "race_run_summary",
+    "race_arm_comparison",
 ]
 
 
@@ -248,6 +361,12 @@ def create_all(conn: psycopg.Connection, *, verbose: bool = True) -> None:
 
     if dialect is Dialect.COCKROACH:
         _create_vector_index(conn, verbose=verbose)
+        # CockroachDB only, because the Managed MCP Server connects to a
+        # CockroachDB Cloud cluster. See MCP_VIEWS_NOTE.
+        for stmt in MCP_VIEWS:
+            conn.execute(stmt)
+            if verbose:
+                print(f"  ok  {_first_line(stmt)}")
 
 
 def _create_vector_index(conn: psycopg.Connection, *, verbose: bool) -> None:
@@ -282,6 +401,13 @@ def _create_vector_index(conn: psycopg.Connection, *, verbose: bool) -> None:
 
 
 def drop_all(conn: psycopg.Connection, *, verbose: bool = True) -> None:
+    # Views first. `DROP TABLE ... CASCADE` would take them with it, but naming
+    # them explicitly means a rebuild cannot leave a view behind that still
+    # matches an older column list.
+    for view in VIEW_DROP_ORDER:
+        conn.execute(f"DROP VIEW IF EXISTS {view}")
+        if verbose:
+            print(f"  dropped view {view}")
     for table in DROP_ORDER:
         conn.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
         if verbose:
