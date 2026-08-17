@@ -45,7 +45,8 @@ TAIL = "\n</body>\n</html>\n"
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", default=str(REPO / "docs" / "ui.html"))
+    ap.add_argument("--out", default=str(REPO / "docs" / "index.html"),
+                    help="docs/index.html so GitHub Pages serves it at the site root")
     ap.add_argument("--artifact-out", default=None,
                     help="also write the body-only variant here, for publishing")
     args = ap.parse_args()
