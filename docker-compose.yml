@@ -1,0 +1,18 @@
+# Arm A: the PostgreSQL control. Default isolation, nothing tuned.
+# The point of this container is to be boringly stock -- it represents what an
+# application gets by default, which is what the comparison is about.
+services:
+  postgres:
+    image: postgres:16
+    container_name: racelab-pg
+    environment:
+      POSTGRES_USER: racelab
+      POSTGRES_PASSWORD: racelab
+      POSTGRES_DB: racelab
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U racelab -d racelab"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

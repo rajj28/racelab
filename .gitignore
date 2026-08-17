@@ -1,0 +1,26 @@
+# Secrets. The DSN and AWS credentials live here; .env.example is the template.
+.env
+
+# Environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Vendored PostgreSQL binaries and their data directory. `scripts/pg_portable.py
+# init` recreates both; the zip is ~200 MB and the data directory is machine-
+# specific state, so neither belongs in the repo.
+vendor/
+data/
+*.log
+
+# Experiment outputs ARE committed. results/*.json holds the raw per-cell
+# aggregates that every table in the README and METHODOLOGY is rendered from,
+# and `scripts/render_sweep.py` regenerates the reports from them. Ignoring
+# them would leave the reports as unverifiable prose.
+#
+# results/superseded/ is committed too, deliberately: METHODOLOGY entry 10
+# discusses the sweep we discarded, and a reader should be able to see what was
+# actually thrown away rather than take our description of it on trust. That
+# directory carries its own README marking it do-not-cite.
