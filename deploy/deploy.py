@@ -250,26 +250,71 @@ def deploy(region: str, concurrency: int, layer: str | None) -> int:
         print(f"updated function {FUNCTION}")
 
     # Correctness, not tuning: Lambda scales past what the cluster accepts.
-    c["lambda"].put_function_concurrency(FunctionName=FUNCTION,
-                                         ReservedConcurrentExecutions=concurrency)
-    print(f"reserved concurrency = {concurrency} (protects the cluster's "
-          f"connection budget)")
+    try:
+        c["lambda"].put_function_concurrency(
+            FunctionName=FUNCTION, ReservedConcurrentExecutions=concurrency)
+        print(f"reserved concurrency = {concurrency} (protects the cluster's "
+              f"connection budget)")
+    except ClientError as exc:
+        if exc.response["Error"]["Code"] != "InvalidParameterValueException":
+            raise
+        # A new AWS account ships with a total concurrency limit of 10 and
+        # refuses to let any of it be reserved, because doing so would drop
+        # unreserved capacity below the minimum it insists on keeping.
+        #
+        # Reported rather than swallowed, and reported accurately: the cap is
+        # not gone, it has just moved. The account's own ceiling is now doing
+        # the job, and it happens to be *stricter* than what we asked for. That
+        # is safe here by accident and would stop being safe the moment the
+        # account limit is raised, which is exactly when nobody would think to
+        # re-check this.
+        try:
+            limit = c["lambda"].get_account_settings()["AccountLimit"][
+                "ConcurrentExecutions"]
+        except Exception:  # noqa: BLE001
+            limit = "unknown"
+        print(f"  reserved concurrency NOT set: the account's total concurrency "
+              f"limit is {limit}, and AWS will not let it drop below its minimum "
+              f"unreserved value.")
+        print(f"  The cluster is currently protected by that account limit "
+              f"({limit}) instead, which is stricter than the {concurrency} we "
+              f"asked for. RE-RUN THIS AFTER ANY CONCURRENCY LIMIT INCREASE -- "
+              f"the protection disappears the moment the account ceiling rises.")
 
     # -- public URL ------------------------------------------------------
+    # AuthType AWS_IAM, deliberately.
+    #
+    # This started as NONE, for the convenience of a clickable demo, and the
+    # environment refused it -- a 403 AccessDeniedException on every request
+    # despite a correct resource policy, which is the signature of an
+    # Organizations SCP forbidding public function URLs.
+    #
+    # That SCP is right and the original choice was wrong. This endpoint writes
+    # to a financial ledger. An unauthenticated public URL that anyone can POST
+    # to is not a demo convenience, it is an open write endpoint, and no
+    # production-readiness argument survives it. Callers sign with SigV4;
+    # `deploy/invoke.py` does exactly that.
+    auth_type = "AWS_IAM"
     try:
         url = c["lambda"].create_function_url_config(
-            FunctionName=FUNCTION, AuthType="NONE",
+            FunctionName=FUNCTION, AuthType=auth_type,
             Cors={"AllowOrigins": ["*"], "AllowMethods": ["POST"]})["FunctionUrl"]
-        c["lambda"].add_permission(
-            FunctionName=FUNCTION, StatementId="public-invoke",
-            Action="lambda:InvokeFunctionUrl", Principal="*",
-            FunctionUrlAuthType="NONE")
-        print(f"created function URL {url}")
+        print(f"created function URL {url}  (auth {auth_type})")
     except ClientError as exc:
         if exc.response["Error"]["Code"] not in ("ResourceConflictException",):
             raise
+        c["lambda"].update_function_url_config(
+            FunctionName=FUNCTION, AuthType=auth_type,
+            Cors={"AllowOrigins": ["*"], "AllowMethods": ["POST"]})
         url = c["lambda"].get_function_url_config(FunctionName=FUNCTION)["FunctionUrl"]
-        print(f"function URL {url}")
+        print(f"function URL {url}  (auth {auth_type})")
+    # Remove the public-invoke grant if an earlier run added one.
+    try:
+        c["lambda"].remove_permission(FunctionName=FUNCTION,
+                                      StatementId="public-invoke")
+        print("removed the earlier public-invoke grant")
+    except ClientError:
+        pass
 
     # -- alarm -----------------------------------------------------------
     try:

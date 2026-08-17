@@ -63,7 +63,16 @@ def _tls(dsn: str) -> str:
     try:
         from ..db import normalize_tls
         return normalize_tls(dsn)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        # Loud. This was silent once and cost a deployment: `racelab.db` imports
+        # python-dotenv at module scope, that was missing from the Lambda layer,
+        # and the ImportError was swallowed here -- so the gateway ran with an
+        # unmodified DSN and failed the TLS handshake looking for a root.crt
+        # that does not exist in a Lambda sandbox. A fallback that hides why it
+        # fell back is not a fallback, it is a trap.
+        log_event("tls_normalization_unavailable", level="WARN",
+                  error=f"{type(exc).__name__}: {exc}",
+                  consequence="DSN used as-is; verify-full will need a CA bundle")
         return dsn
 
 
