@@ -245,6 +245,23 @@ parameterize a read. `create`, `delete` and `sql` are unreachable even if a call
 asks for them, because an agent that can delete its own memory layer is a worse
 problem than any it was built to prevent. Every call uses `--output json`.
 
+**We also ship an MCP server.** `racelab` consumes CockroachDB's Managed MCP
+Server to inspect runs, and *provides* one so any MCP client — Claude Code,
+Cursor, VS Code, a LangChain MCP adapter — gains a write it cannot use to violate
+the policy it retrieved. Four tools: `decide_and_write`, `recall`, `remember`,
+`audit_decisions`, writes off by default.
+
+The novel part is a result MCP has no vocabulary for. It has tool success and
+tool error, but no way to say *"your last answer was derived from state that has
+since changed; here is the new state, decide again."* `decide_and_write` returns
+`status: "reconsider"` carrying the total then and now, the policy then and now,
+whether that policy moved mid-flight, and which actions would still fit. The
+server deliberately does **not** retry — retrying would replay the same amount,
+the exact failure this project measures. The agent re-decides in its own context.
+
+Verified with five concurrent MCP clients: `{committed: 2, reconsider: 3}`,
+18/18 checks, driven as a real client over stdio. See `docs/MCP_SERVER.md`.
+
 **Agent Skills Repo — a contribution back.**
 `contrib/cockroachdb-skills/` holds
 `retrying-agent-decisions-under-contention`, written for
@@ -742,6 +759,7 @@ above.
 | `docs/METHODOLOGY.md` | Every scenario parameter and change, logged before results |
 | `docs/MCP.md` | Inspecting the experiment through CockroachDB Cloud's own MCP server |
 | `docs/ARCHITECTURE.md` | How the pieces fit, and every failure path |
+| `docs/MCP_SERVER.md` | RaceLab **as** an MCP server: a guarded write for any agent |
 | `deploy/` | Lambda gateway, IAM policy, signed client |
 
 ## Quickstart

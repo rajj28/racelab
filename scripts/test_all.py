@@ -40,6 +40,8 @@ SUITE = [
      "the finding survives random action spaces, so $80.00 was one instance", True),
     ("seats", "test_scenario_seats.py",
      "a second scenario: counts, and a categorical correction", True),
+    ("mcp-server", "test_mcp_server.py",
+     "any MCP client gets a guarded write and a 'reconsider' result", True),
     ("langchain", "test_langchain.py",
      "the LangChain tool re-decides instead of replaying", False),
 ]

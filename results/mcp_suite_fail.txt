@@ -1,0 +1,56 @@
+
+==============================================================================
+mcp-server: any MCP client gets a guarded write and a 'reconsider' result
+==============================================================================
+RaceLab MCP server, driven as a real client over stdio
+============================================================================
+  account mcp-demo-001  ceiling $60 (in retrieved text)  hard limit $100
+
+1. Protocol
+  [PASS] server initialized -- racelab 
+  [PASS] all four tools advertised -- ['decide_and_write', 'recall', 'remember', 'audit_decisions']
+  [PASS] instructions tell the model what to do with 'reconsider'
+
+2. Memory is real: recall goes through the vector index
+  [PASS] the policy is retrievable -- 1 memories
+
+3. A write that fits commits
+     status=committed total_now=45
+  [PASS] status is committed -- {'status': 'committed', 'action': 'allocate(45)', 'total_now': 45, 'ceiling': 60, 'run_id'
+  [PASS] the ledger reflects it -- $45
+
+4. A write that breaks the retrieved ceiling is refused
+     status=refused  still_permitted=[]
+  [PASS] status is refused -- {'status': 'refused', 'why': 'constraint refused 1 action(s) (allocate(45)); nothing writt
+  [PASS] nothing was written -- $45 unchanged
+  [PASS] the response names the ceiling
+  [PASS] it tells the agent what would fit
+
+5. Genuine contention returns 'reconsider', not an error
+     5 concurrent writers -> {'committed': 1, 'reconsider': 4}
+     then=0 now=35
+     guidance: allocate(35) was derived from a total of 0, which is now 35. Choose again from ['allocate(45)', 'allocate(40)'
+  [PASS] concurrent writers produced status='reconsider' -- outcomes: {'committed': 1, 'reconsider': 4}
+  [PASS] at least one write still committed -- 1 committed
+  [PASS] it reports the state at decision time and now -- 0 -> 35
+  [PASS] it reports the policy at decision time and now
+  [PASS] it names the action that is now stale
+  [PASS] it tells the agent to choose again, not to retry
+  [PASS] nothing was written for the reconsidered call
+
+6. Read-only mode refuses writes
+  [PASS] writes are forbidden without --allow-writes -- {'status': 'forbidden', 'why': 'this server was started read-only; restart with 
+
+============================================================================
+18/18 passed
+
+Any MCP client -- Claude Code, Cursor, VS Code, a LangChain MCP
+adapter -- gets a write it cannot use to violate its own policy, and
+a 'reconsider' result the protocol has no other vocabulary for.
+
+==============================================================================
+Summary
+==============================================================================
+  PASS  mcp-server   24.2s
+
+All 1 suites passed.
