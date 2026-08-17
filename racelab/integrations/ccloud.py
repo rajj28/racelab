@@ -64,9 +64,15 @@ _ALLOWED: dict[str, list[str]] = {
 # published per-cluster (FEEDBACK entry 6), so this is our measured experience
 # rather than a documented limit, and it says so where it is used.
 _PLAN_CONNECTION_BUDGET = {
+    # `SERVERLESS` is what the API still returns for what the console now calls
+    # Basic. Both spellings are mapped, because a budget check that silently
+    # does not fire is worse than no budget check -- testing this with an absurd
+    # 500 connections is how we found it returning "ready".
+    "SERVERLESS": 30,
     "BASIC": 30,
     "STANDARD": 100,
     "ADVANCED": 100,
+    "DEDICATED": 100,
 }
 
 
@@ -149,6 +155,33 @@ class Preflight:
         return "\n".join(bits)
 
 
+def cluster_name_from_dsn(dsn: str | None = None) -> str | None:
+    """Derive the cluster name from the DSN we are actually going to connect to.
+
+    CockroachDB Cloud hostnames embed it:
+    `blast-avocet-31998.j77.aws-ap-south-1.cockroachlabs.cloud` -> `blast-avocet`.
+
+    This exists because an earlier version of `preflight` defaulted to "the first
+    cluster in the list", which is only correct when there is one cluster. As
+    soon as a second appeared -- `ccloud quickstart` creates one as a side effect
+    of logging in -- that default became a coin flip, and preflighting the wrong
+    cluster is worse than not preflighting at all: it reports health for
+    something the run will never touch.
+    """
+    if dsn is None:
+        try:
+            from ..db import dsn_for
+            dsn = dsn_for("crdb")
+        except Exception:  # noqa: BLE001
+            return None
+    import re
+    host = re.search(r"@([^:/?]+)", dsn or "")
+    if not host:
+        return None
+    found = re.match(r"([a-z0-9]+-[a-z0-9]+)-\d+\.", host.group(1))
+    return found.group(1) if found else None
+
+
 def preflight(*, cluster_name: str | None = None, planned_connections: int = 0
               ) -> Preflight:
     """Ask the control plane whether it is sane to launch a swarm right now.
@@ -169,20 +202,26 @@ def preflight(*, cluster_name: str | None = None, planned_connections: int = 0
         out.reasons.append("the organization has no clusters visible to this session")
         return out
 
-    chosen = None
+    # Default to the cluster the DSN names, never to "the first one".
+    cluster_name = cluster_name or cluster_name_from_dsn()
     if cluster_name:
         chosen = next((c for c in rows if c.get("name") == cluster_name), None)
         if chosen is None:
             out.reasons.append(
-                f"no cluster named {cluster_name!r}; visible: "
-                f"{[c.get('name') for c in rows]}")
+                f"the DSN points at cluster {cluster_name!r}, which this ccloud "
+                f"session cannot see. Visible: {[c.get('name') for c in rows]}. "
+                f"Either the session is in the wrong organization or the DSN is "
+                f"stale -- do not proceed on the assumption they match.")
             return out
-    else:
+    elif len(rows) == 1:
         chosen = rows[0]
-        if len(rows) > 1:
-            out.warnings.append(
-                f"{len(rows)} clusters visible and none named; used "
-                f"{chosen.get('name')!r}")
+    else:
+        out.reasons.append(
+            f"{len(rows)} clusters visible and the DSN does not identify one "
+            f"({[c.get('name') for c in rows]}). Refusing to guess: preflighting "
+            f"the wrong cluster reports health for something the run will never "
+            f"touch.")
+        return out
 
     out.cluster_name = chosen.get("name")
     state = (chosen.get("state") or chosen.get("status") or "").upper()
@@ -199,6 +238,13 @@ def preflight(*, cluster_name: str | None = None, planned_connections: int = 0
 
     budget = _PLAN_CONNECTION_BUDGET.get(plan)
     out.connection_budget = budget
+    if budget is None and planned_connections:
+        # An unrecognised plan must not read as "no limit". Say so, so the
+        # absence of a refusal is never mistaken for an approval.
+        out.warnings.append(
+            f"plan {plan or '(unreported)'!r} is not in the connection-budget "
+            f"table, so the {planned_connections}-connection request was NOT "
+            f"checked against a limit")
     if budget and planned_connections > budget:
         # The lesson from FEEDBACK entry 6, encoded so it cannot be relearned
         # the hard way: refuse rather than discover it mid-sweep.
