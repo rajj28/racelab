@@ -296,7 +296,12 @@ def render(cells, args, scenario, elapsed) -> str:
         add("| Arm | Hard-limit violations | Policy breaches | Mean final sum | "
             "Conflicts | Revisions | Committed | Abstained |")
         add("|---|---|---|---|---|---|---|---|")
-        for arm_id in arms_to_run:
+        # Derived from the cells actually present, not from a CLI flag. `render`
+        # is also called by scripts/render_sweep.py against a saved JSON file,
+        # where no argument list exists -- an earlier version referenced the
+        # flag here and raised NameError at the end of a 25-cell sweep, after
+        # every measurement was already done.
+        for arm_id in [a for a in ORDER if (window, a) in cells]:
             s = cells[(window, arm_id)]
             add(f"| {ARMS[arm_id].label} | {s['hard_limit_violations']}/{s['runs']} "
                 f"| {s['policy_breaches']}/{s['runs']} | {s['mean_final_sum']:.1f} "
@@ -305,15 +310,42 @@ def render(cells, args, scenario, elapsed) -> str:
 
     add("\n\n### Full decomposition\n")
     add("Change in mean final sum. Negative is an improvement.\n")
-    add("| Window | isolation surfaces conflict (B-A) | re-reason over fresh state "
-        "(C-ops-B) | refresh memory (C-C-ops) |")
-    add("|---|---|---|---|")
+    add("`B-A` crosses PostgreSQL and CockroachDB at different network latencies,")
+    add("so it confounds isolation level with deployment. `B-A-rc` is the")
+    add("vendor-controlled version: same cluster, only the isolation level differs.")
+    add("Where the two disagree, trust the controlled one.\n")
+    add("| Window | B-A (confounded) | B-A-rc (controlled) | re-reason over fresh "
+        "state (C-ops-B) | refresh memory (C-C-ops) |")
+    add("|---|---|---|---|---|")
     for window in args.windows:
-        by_arm = {a: cells[(window, a)]["mean_final_sum"] for a in ORDER}
+        by_arm = {a: cells[(window, a)]["mean_final_sum"]
+                  for a in ORDER if (window, a) in cells}
         c = contributions(by_arm)
-        add(f"| {window} ms | {c['isolation_surfaces_conflict']:+.1f} "
-            f"| {c['re_reasoning_over_fresh_operational_state']:+.1f} "
-            f"| {c['refreshing_semantic_memory']:+.1f} |")
+
+        def fmt(key: str) -> str:
+            v = c.get(key)
+            return "n/a" if v is None else f"{v:+.1f}"
+
+        add(f"| {window} ms | {fmt('isolation_surfaces_conflict')} "
+            f"| {fmt('isolation_surfaces_conflict_same_vendor')} "
+            f"| {fmt('re_reasoning_over_fresh_operational_state')} "
+            f"| {fmt('refreshing_semantic_memory')} |")
+
+    # Rates, not means. The means above are noisy for the naive arms because they
+    # depend on how many agents happened to get through, which moves with
+    # deployment latency. The violation rate does not.
+    add("\n\n### Hard-limit violation rate, all windows pooled\n")
+    add("The primary metric. A rate, not a mean, so it does not move with the")
+    add("action space or with how fast the backend answers.\n")
+    add("| Arm | Runs over the hard limit | Runs |")
+    add("|---|---|---|")
+    for arm_id in ORDER:
+        rows = [cells[(w, arm_id)] for w in args.windows if (w, arm_id) in cells]
+        if not rows:
+            continue
+        bad = sum(r["hard_limit_violations"] for r in rows)
+        tot = sum(r["runs"] for r in rows)
+        add(f"| {ARMS[arm_id].label} | {bad} | {tot} |")
 
     return "\n".join(lines) + "\n"
 

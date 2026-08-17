@@ -33,46 +33,131 @@ recoverable only by going back to memory. That distinction is the contribution.
 
 ## Results
 
-10 runs per arm per window, 20 agents per run, five arrival windows, reference
-reasoner. Full report in `results/sweep_fixed.md`, raw cells in
-`results/sweep_fixed.json`.
+Five arms, five arrival windows, 10 runs per cell, 20 agents per run — **250 runs
+and 5,000 agent decisions**. Reference reasoner. Full report in
+`results/sweep_controlled.md`, raw cells in `results/sweep_controlled.json`.
 
-Hard-limit violations and policy-ceiling breaches, out of 10 runs, at the
-400 ms arrival window:
+### The primary metric is a rate
 
-| Arm | | Hard limit `≤ $100` | Policy ceiling `≤ $60` | Mean final sum | Conflicts seen |
-|---|---|---|---|---|---|
-| **A** | postgres RC, naive | 9/10 violated | 10/10 breached | 196.0 | **0** |
-| **B** | cockroach, naive | 10/10 violated | 10/10 breached | 229.5 | 600 |
-| **C-ops** | cockroach, re-reason over fresh state | **0/10** | 10/10 breached | 80.0 | 183 |
-| **C** | cockroach, re-reason + refresh memory | **0/10** | **0/10** | 45.0 | 131 |
+Runs that exceeded the `$100` hard limit, pooled across all five windows:
 
-The two co-primary invariants separate the arms cleanly, and they separate them
-for different reasons:
+| Arm | | Over the hard limit | Policy ceiling breached | Conflicts raised |
+|---|---|---|---|---|
+| **A** | postgres RC, naive | **45 / 50** | 50 / 50 | **0** |
+| **A-rc** | cockroach RC, naive | **48 / 50** | 50 / 50 | **0** |
+| **B** | cockroach SERIALIZABLE, naive | **47 / 50** | 47 / 50 | 1,660 |
+| **C-ops** | + re-reason over fresh state | **0 / 50** | 49 / 50 | 662 |
+| **C** | + refresh memory too | **0 / 50** | 28 / 50 | 506 |
 
-- **A is given no signal.** It violates the hard limit while reporting zero
-  conflicts. READ COMMITTED permits this execution and the application is never
-  told anything happened.
-- **B is given the signal and discards it.** It sees 600 serialization failures
-  and replays the same decision through every one.
-- **C-ops re-reads state and holds the hard limit at 0/10 — at every window in
-  the sweep.** Its mean final sum is exactly `80.0` in all five cells: it lands
-  precisely on the ceiling it remembers, which is the one that was withdrawn.
-- **C also refreshes memory, and holds both.**
+A rate, deliberately, and not a mean. Mean final sums move with deployment
+latency and with the action space; **0 / 50 against 45–48 / 50 does not.**
+
+Four epistemic conditions, and they fail differently:
+
+- **A and A-rc are given no signal.** They break the hard limit in nearly every
+  run while raising **zero** errors. READ COMMITTED permits the execution and the
+  application is never told anything happened. That holds on both databases, which
+  is what arm `A-rc` exists to establish.
+- **B is given the signal and discards it.** 1,660 serialization failures,
+  correctly raised, and it replays the same decision through every one.
+- **C-ops re-reads state and never breaks the hard limit** — 0 of 50 runs, at
+  every window. It still breaches the policy ceiling in 49 of 50.
+- **C also refreshes memory** and cuts policy breaches to 28 of 50.
 
 That C-ops row is the whole argument for calling this an agentic-memory
-contribution rather than a concurrency library. The hard limit is a column in
-the database, so re-reading operational state recovers it. The policy ceiling
-exists only as a retrieved memory, and **no amount of operational re-reading
-recovers it** — C-ops re-reads perfectly and still breaches, every run, at every
-window.
+contribution rather than a concurrency library. The hard limit is a column, so
+re-reading operational state recovers it completely. The policy ceiling exists
+only as retrieved text, and **no amount of operational re-reading recovers it.**
 
-Across the full sweep, the conflict-aware arm improves the mean final sum by
-109–199 against naive retry at every window.
+### The number it lands on is not the point
 
-Full per-window tables, both invariants, both gaps and the decomposition are in
-`results/sweep_fixed.md`. Run counts and the amended stopping rule are in
-`docs/METHODOLOGY.md` Entry 13.
+An earlier version of this README led with *"C-ops ends at exactly `$80.00`, zero
+variance across nine cells."* That was close to cheating. With options of
+`45/40/35` against a remembered ceiling of `$80`, `45 + 35 = 80` exhausts the
+headroom precisely — the clean number is arithmetic we chose, not a regularity we
+found. The controlled sweep already cracks it: C-ops means came in at
+`80.0, 80.0, 80.0, 80.0` and **`78.0`**.
+
+So the claim is stated generally and tested that way. `scripts/test_action_space.py`
+draws random action spaces, deliberately off the multiple-of-5 grid:
+
+| options | C-ops final | C final |
+|---|---|---|
+| (37, 36, 24) | 74 | 37 |
+| (50, 26, 23) | 76 | 50 |
+| (27, 20, 17) | 74 | 54 |
+| (51, 46, 17) | 68 | 51 |
+| (43, 38, 24) | 67 | 43 |
+
+Five distinct C-ops totals, none of them `80`. What holds across every draw:
+**C-ops fills to the ceiling it remembers, C fills to the ceiling in force, and
+neither ever breaks the hard limit.** `$80.00` was one instance of that mechanism.
+
+### It reproduces in a second, different scenario
+
+One hand-built scenario cannot distinguish "we found something" from "we built
+something that produces this". `scripts/test_scenario_seats.py` is a second one,
+different along three axes: **counts** of rows instead of a sum, a **categorical**
+action instead of a magnitude, and a correction that requires granting a
+*different kind* of thing rather than a smaller number.
+
+Twenty agents grant license seats. The org seat cap is a column; the premium-seat
+cap lives only in retrieved text and drops from 5 to 2 mid-run.
+
+| Arm | Total seats | Premium seats | vs. the `2` cap in force |
+|---|---|---|---|
+| naive | 7 | **7** | breached |
+| C-ops | 8 | **3** | breached — but within the `5` it remembered |
+| C | 8 | **2** | held |
+
+Arm C granted *more* seats than naive while breaching nothing: 8 seats of which
+only 2 premium. It **switched tier**. No numeric clamp produces that, which is why
+this scenario is worth having — it rules out the reading that re-reasoning merely
+shrinks a number.
+
+### The guardrail: enforced, not observed
+
+Everything above measures *behaviour*. On its own that leaves a hole a reviewer
+found immediately: nothing stopped the agent from ignoring the refreshed policy.
+"C respected the new ceiling" really meant "C's agent happened to reason correctly
+over fresh input."
+
+`ConflictAware(constraint=...)` closes it. The constraint runs **inside the
+transaction, after the write and before the commit**, and a state it rejects is
+never made durable. Measured in `scripts/test_guardrail.py`:
+
+| | outcome | total | ceiling `$60` |
+|---|---|---|---|
+| no guardrail | committed `allocate(45)` | `$65` | **breached** |
+| naive + guardrail | **refused**, nothing written | `$20` | held |
+| conflict-aware + guardrail | committed `allocate(40)` | `$60` | held |
+| aware but **ignoring** the refusal | **refused** | `$20` | held |
+
+The middle rows carry it. The guarantee is **orthogonal to re-reasoning**: a naive
+agent cannot use the feedback, so it declines rather than violating. Re-reasoning
+upgrades "safely refused" to "correctly committed" — it buys **throughput, not
+safety**. And the last row is the one that closes the objection: an agent whose
+reasoning ignores the refusal entirely still cannot force a violating state
+through.
+
+### Why this needs serializable isolation
+
+This is the reason the database choice matters, and it is not "it surfaces
+conflicts":
+
+- A check **outside** the transaction is racy at any isolation level — state can
+  move between the check and the commit.
+- A check **inside** the transaction is *still* racy under READ COMMITTED, because
+  another writer can commit underneath the snapshot your check read.
+- A check inside the transaction under **SERIALIZABLE is sound** — the state you
+  verified is the state you commit, or the commit is refused with `40001` and the
+  whole cycle runs again.
+
+Serializable isolation is what lets a check performed *before* a commit still be
+true *after* it. That is what makes agent-level constraint enforcement possible at
+all.
+
+Run counts and the amended stopping rule are in `docs/METHODOLOGY.md` Entry 13.
 
 ---
 
@@ -149,40 +234,62 @@ One of 60 readings needed a repair, and the re-ask returned the correct `abstain
 
 ---
 
-## Surfacing a conflict to a client that ignores it is worse than not surfacing it
+## Retracted: "surfacing a conflict is worse than not surfacing it"
 
-The most useful number in the sweep is one that argues against the obvious
-reading of the rest of it.
+An earlier version of this README led with a counterintuitive result — that
+CockroachDB with naive retry reached a *worse* mean final sum than PostgreSQL
+READ COMMITTED, because retry gave each stale decision five chances instead of
+one. It was our most-quoted finding.
 
-`B − A` — moving from PostgreSQL READ COMMITTED to CockroachDB SERIALIZABLE while
-keeping naive retry — is **positive at every arrival window**: +33.5, +64.5,
-+105.0, +67.0, +64.0 mean final sum. The stronger isolation level made the final
-state *worse*.
+**It does not survive a controlled comparison, and we withdraw it.**
 
-| | conflicts seen | exhausted agents | committed | mean sum | hard limit |
-|---|---|---|---|---|---|
-| **A** postgres RC, naive | **0** | 0 | 46 | 196.0 | 9/10 violated |
-| **B** cockroach, naive | **600** | 99 | 51 | 229.5 | 10/10 violated |
+Arm A is the only arm on a different database *and* a different network latency:
+localhost PostgreSQL against CockroachDB Cloud at roughly 390 ms round trip. In a
+400 ms arrival window that changes how many agents are concurrently in flight,
+which changes how many read a stale total. So `B − A` was measuring deployment
+latency at least as much as isolation level.
 
-The mechanism is visible in one division. Arm B committed 51 allocations totalling
-2,295 — **exactly 45.0 each**. All twenty agents read a sum of zero, all decided
-`allocate(45)`, and all replayed that same decision through every restart. The
-serialization failure arrived 600 times and changed nothing, while retry gave each
-stale decision five chances to land instead of one.
+Two measurements make that concrete:
 
-**This is not READ COMMITTED performing better.** Arm A violates the hard limit
-9 times in 10 with **zero conflicts** — it commits the violating execution in
-silence and the application is never told anything happened. READ COMMITTED
-permits that execution. A is not safe; it is uninformed.
+- The same arm A, same seeds, same configuration, gave a mean final sum of
+  **196.0** on localhost binaries and **344.0** in Docker. Only the deployment
+  changed.
+- Across five windows, `B − A` is `−116.0, +6.5, −17.0, +61.5, +38.0`. The sign
+  flips. A quantity whose sign depends on how you installed PostgreSQL is not
+  evidence about isolation levels.
 
-What the result forecloses is the reading *"so the fix is to switch databases."*
-It is not. A serialization failure is a signal, and a signal delivered to a
-client that discards it is worse than no signal at all, because the retry
-machinery built to handle it amplifies the error. The benefit appears only at
-`C-ops − B`, where the signal is acted on: **−109 to −175** across the sweep.
+### The fix: hold the vendor constant
 
-`B − A` therefore cannot be presented as a benefit of SERIALIZABLE, and we do not
-present it as one.
+CockroachDB v26.2 supports `READ COMMITTED`, so the control does not have to be a
+different database. **Arm `A-rc`** is the same naive policy on the same cluster
+with only the isolation level changed. It reproduces the anomaly severely —
+totals of 765, 675 and 360 against a `$100` limit, with **zero** errors raised,
+the same silent-failure signature as PostgreSQL.
+
+Controlled, the result reverses:
+
+| Window | `B − A` (confounded) | `B − A-rc` (controlled) |
+|---|---|---|
+| 400 ms | −116.0 | **−418.5** |
+| 1000 ms | +6.5 | **−49.5** |
+| 1500 ms | −17.0 | **−4.0** |
+| 2500 ms | +61.5 | +18.0 |
+| 4000 ms | +38.0 | **−67.5** |
+
+**Serializable isolation helps even a naive client.** The dramatic version of our
+old claim was an artifact, and the honest version is duller: retrying a stale
+decision is bad, and it is still better than never being told the state moved.
+
+### What this cost, and what it bought
+
+We lost a memorable headline. We gained a control that removes a confound from
+every comparison in the project, and a reproducibility win — arm `A-rc` needs no
+PostgreSQL at all, so a judge with only a CockroachDB connection string can run
+the entire five-arm comparison.
+
+The claim that actually carries the project never depended on `B − A`. It is
+`C-ops − B` and `C − C-ops`, both on one cluster at one isolation level, which no
+deployment difference can touch.
 
 ## No protocol can revoke a valid commit
 

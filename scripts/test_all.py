@@ -36,6 +36,10 @@ SUITE = [
     # RunnableLambda, so no embeddings or model calls are involved.
     ("guardrail", "test_guardrail.py",
      "a constraint checked before commit is enforced, not merely observed", False),
+    ("action-space", "test_action_space.py",
+     "the finding survives random action spaces, so $80.00 was one instance", True),
+    ("seats", "test_scenario_seats.py",
+     "a second scenario: counts, and a categorical correction", True),
     ("langchain", "test_langchain.py",
      "the LangChain tool re-decides instead of replaying", False),
 ]

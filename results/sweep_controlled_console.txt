@@ -30,3 +30,17 @@ hard limit $100, ceiling $80 -> $60 mid-run
   w= 4000  A · postgres RC · naive                      limit   6/10  policy  10/10  mean sum  116.5 conflicts    0 revisions    0
   w= 4000  A-rc · cockroach RC · naive                  limit   9/10  policy  10/10  mean sum  222.0 conflicts    0 revisions    0
   w= 4000  B · cockroach · naive                        limit   7/10  policy   7/10  mean sum  154.5 conflicts  111 revisions    0
+  w= 4000  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy   9/10  mean sum   78.0 conflicts   71 revisions   52
+  w= 4000  C · cockroach · full refresh                 limit   0/10  policy   9/10  mean sum   76.5 conflicts   66 revisions   45
+
+Traceback (most recent call last):
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 397, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 202, in main
+    report = render(cells, args, scenario, elapsed)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 299, in render
+    for arm_id in arms_to_run:
+                  ^^^^^^^^^^^
+NameError: name 'arms_to_run' is not defined

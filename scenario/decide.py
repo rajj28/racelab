@@ -78,6 +78,7 @@ def propose(
     inferred_ceiling: int | None,
     observed_sum: int,
     hard_limit: int,
+    options: tuple[int, ...] = ALLOCATION_OPTIONS,
 ) -> Decision:
     """Choose the largest allocation that fits under both the ceiling and the limit.
 
@@ -90,7 +91,7 @@ def propose(
     binding = hard_limit if inferred_ceiling is None else min(inferred_ceiling, hard_limit)
     remaining = binding - observed_sum
 
-    for amount in ALLOCATION_OPTIONS:
+    for amount in options:
         if amount <= remaining:
             return Decision(
                 action=f"allocate({amount})",
@@ -113,7 +114,7 @@ def propose(
             f"observed {observed_sum} against binding ceiling {binding} "
             f"(policy {inferred_ceiling}, hard limit {hard_limit}); "
             f"{remaining} remaining, smaller than the smallest option "
-            f"{min(ALLOCATION_OPTIONS)}"
+            f"{min(options)}"
         ),
     )
 

@@ -51,6 +51,7 @@ under the conflict-aware policy.
 | Arm | Backend | Isolation | Policy |
 |---|---|---|---|
 | A | PostgreSQL 16 | READ COMMITTED | naive |
+| A-rc | CockroachDB | READ COMMITTED | naive (added; see Entry 15) |
 | B | CockroachDB | SERIALIZABLE | naive |
 | C-ops | CockroachDB | SERIALIZABLE | conflict-aware, operational re-read only (added; see Entry 7) |
 | C | CockroachDB | SERIALIZABLE | conflict-aware, full refresh |
@@ -74,14 +75,19 @@ finding.
 > arm, 200 total) instead of 100 per arm at one. Entry 13 records the trade and
 > what the reduced depth costs.
 >
-> **Narrowed — see Entry 14.** The zero-variance argument holds for **arm C-ops**
-> and is stated for arm C-ops only: it ends at exactly `80.0` in all nine cells
-> measured across two experiments and both reasoning providers, with no variance
-> to resolve. That is the claim this project makes. **Arm C** sits next to a
-> decision boundary and does move between samples of the same configuration — we
-> ran it twice and published the mismatch rather than the friendlier number.
-> Consequence for readers: small differences between adjacent windows in arm C
-> are not signal. The 100-run cell remains un-run.
+> **Narrowed — see Entry 14.** Arm C sits next to a decision boundary and moves
+> between samples of the same configuration — we ran it twice and published the
+> mismatch rather than the friendlier number. Consequence for readers: small
+> differences between adjacent windows in arm C are not signal. The 100-run cell
+> remains un-run.
+>
+> **Corrected again — see Entry 16.** Entry 14 said arm C-ops has no variance to
+> resolve, ending at exactly `80.0` in all nine cells then measured. The
+> controlled sweep found `78.0` in one cell, so that is false as a general claim
+> and was an artifact of which cells had been measured. What replaced it is a
+> claim about the mechanism rather than the number — a greedy agent fills to the
+> cap it remembers, whichever cap and whichever action space — tested across
+> random action spaces in `scripts/test_action_space.py`.
 
 ---
 
@@ -1137,3 +1143,158 @@ strengthens the case for eventually running it.
 The pre-registration's determinism claim already covered this — deterministic
 *workload*, distributional *outcome*, no claim that interleaving is reproducible
 byte-for-byte. What is new is the measurement of how much that costs, and where.
+
+---
+
+## 2026-08-17 — Entry 15: arm A was confounded, and the headline built on it is withdrawn
+
+Arm A is the only arm that differs from B in **two** ways: isolation level *and*
+database. It is localhost PostgreSQL against CockroachDB Cloud at roughly 390 ms
+round trip. In a 400 ms arrival window that changes how many agents are
+concurrently in flight, which changes how many read a stale total.
+
+So `B - A` was never a clean measurement of what isolation buys. Two observations
+make that concrete rather than theoretical:
+
+- **The same arm, same seeds, same configuration, different deployment.** Arm A
+  gave a mean final sum of `196.0` running on the portable localhost binaries and
+  `344.0` running in Docker. Nothing about isolation changed between those two
+  numbers.
+- **The sign flips across windows.** `B - A` is `-116.0, +6.5, -17.0, +61.5,
+  +38.0`. A quantity whose sign depends on how PostgreSQL was installed is not
+  evidence about isolation levels.
+
+### What is withdrawn
+
+The README previously led with *"surfacing a conflict to a client that ignores it
+is worse than not surfacing it"*, on the strength of `B - A` being positive. **That
+claim is retracted.** It was our most quotable finding and it does not survive a
+controlled comparison.
+
+### The control that fixes it: arm A-rc
+
+CockroachDB v26.2 supports `READ COMMITTED`, so the control does not have to be a
+different database. Arm `A-rc` runs the same naive policy on the same cluster with
+only the isolation level changed.
+
+It reproduces the anomaly severely, which had to be checked rather than assumed —
+CockroachDB's READ COMMITTED is not PostgreSQL's, and it could have held the
+invariant: totals of 765, 675 and 360 against a `$100` limit, with **zero** errors
+raised. Same silent-failure signature.
+
+Controlled, the direction reverses:
+
+| Window | `B - A` (confounded) | `B - A-rc` (controlled) |
+| ------ | -------------------- | ----------------------- |
+| 400 ms  | -116.0 | **-418.5** |
+| 1000 ms | +6.5   | **-49.5**  |
+| 1500 ms | -17.0  | **-4.0**   |
+| 2500 ms | +61.5  | +18.0      |
+| 4000 ms | +38.0  | **-67.5**  |
+
+Serializable isolation helps even a naive client. The honest version of the
+finding is duller than the one we withdrew: retrying a stale decision is bad, and
+it is still better than never being told the state moved.
+
+### Consequences adopted
+
+1. **The primary metric is now a rate, not a mean.** Hard-limit violations pooled
+   across all five windows: A 45/50, A-rc 48/50, B 47/50, C-ops **0/50**, C
+   **0/50**. Rates do not move with deployment latency or action space.
+2. **`B - A` is still reported**, beside the controlled version, labelled
+   confounded. Deleting it would hide that we published it.
+3. **Arm A is retained** as the vendor-faithful control, with a warning attached.
+   It answers "what does stock PostgreSQL do", which is a real question; it does
+   not answer "what does the isolation level do".
+4. **PostgreSQL became optional**, which is a reproducibility win: the full
+   five-arm comparison now runs against a CockroachDB connection string alone.
+
+The claim that carries the project never depended on this. `C-ops - B` and
+`C - C-ops` are both measured on one cluster at one isolation level, where no
+deployment difference can reach them.
+
+---
+
+## 2026-08-17 — Entry 16: the $80.00 result generalises; three checks that could have shown it did not
+
+Entry 11 reported that arm C-ops ends at exactly `$80.00` with zero variance, and
+the README led with it. A reviewer pointed out that this is close to cheating:
+with options of `45/40/35` against a remembered ceiling of `$80`, `45 + 35 = 80`
+exhausts the headroom precisely. The clean number is arithmetic we chose.
+
+The controlled sweep cracks it without any help: C-ops means came in at `80.0,
+80.0, 80.0, 80.0` and **`78.0`**. Not universally exact. So the "nine cells, zero
+variance" phrasing was an artifact of which cells had been measured.
+
+### The general claim, and how it was tested
+
+The claim that survives is about the mechanism, not the number:
+
+> A greedy agent reasoning over a remembered cap fills to that cap, whatever the
+> cap is and whatever the action space is.
+
+`scripts/test_action_space.py` draws random action spaces, deliberately off the
+multiple-of-5 grid that produces the tidy `80`, and requires four things per draw:
+C-ops lands above the ceiling in force, C-ops lands at or below the ceiling it
+remembered, C lands at or below the ceiling in force, and neither breaks the hard
+limit.
+
+Seven draws, all passing. C-ops totals: `67, 68, 73, 74, 76` — five distinct
+values, stdev 3.4, none of them 80.
+
+### A second scenario, different along three axes
+
+One scenario cannot separate "we found something" from "we built something that
+produces this". `scripts/test_scenario_seats.py` uses **counts** of rows instead
+of a sum, a **categorical** action instead of a magnitude, and a correction that
+requires granting a *different kind* of thing rather than less of the same thing.
+
+| Arm | Total seats | Premium seats | vs. the cap of 2 in force |
+| --- | ----------- | ------------- | ------------------------- |
+| naive | 7 | 7 | breached |
+| C-ops | 8 | 3 | breached, within the 5 it remembered |
+| C     | 8 | 2 | held |
+
+Arm C granted **more** seats than naive while breaching nothing — 8 seats of which
+only 2 premium. It switched tier. No numeric clamp produces that, which is the
+specific alternative explanation this scenario rules out: re-reasoning is not just
+shrinking a number.
+
+### What would have falsified these
+
+Recorded because a check that could not fail is not a check:
+
+- If C-ops had landed on the same total for every action space, the number was the
+  artifact and the mechanism claim was empty.
+- If C-ops had gone *past* the ceiling it remembered, it is not "greedy up to its
+  cap" and the description was wrong.
+- If the seat scenario had shown C granting fewer seats rather than different
+  ones, the numeric-clamp explanation would have survived.
+- If either arm had broken the seat cap, the structural claim would not transfer
+  across scenarios.
+
+None of those happened, and all four were live possibilities before running.
+
+### The guardrail, and why the isolation level is load-bearing
+
+The same review noted that all of this measures behaviour: nothing *stopped* the
+agent from ignoring refreshed policy. `ConflictAware(constraint=...)` now does,
+checking inside the transaction after the write and before the commit.
+
+The placement is the whole idea, and it is what ties the project to serializable
+isolation rather than to CockroachDB as a brand:
+
+- Outside the transaction, a check is racy at any isolation level.
+- Inside the transaction it is *still* racy under READ COMMITTED, because another
+  writer can commit underneath the snapshot the check read.
+- Inside the transaction under SERIALIZABLE it is sound: either the verified state
+  is the committed state, or the commit is refused with a `40001`.
+
+Serializable isolation is what lets a check performed before a commit still be
+true after it. Measured in `scripts/test_guardrail.py`, 16/16, including the case
+that matters most — an agent that ignores the refusal entirely still cannot commit
+a violating state.
+
+The guarantee is orthogonal to re-reasoning. A naive agent with a constraint
+declines rather than violating; re-reasoning turns "safely refused" into
+"correctly committed". It buys throughput, not safety.
