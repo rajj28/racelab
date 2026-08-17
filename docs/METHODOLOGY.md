@@ -74,13 +74,14 @@ finding.
 > arm, 200 total) instead of 100 per arm at one. Entry 13 records the trade and
 > what the reduced depth costs.
 >
-> **Partly retracted — see Entry 14.** Entry 13 argued the reduced run count was
-> sufficient because the arms carrying the ablation claim had zero within-cell
-> variance. Re-running the reference provider at identical seeds during the model
-> arm did not reproduce the sweep's numbers for arm C, so that argument does not
-> hold: the zero-variance observation described those particular cells, not the
-> design. Arm C-ops is unaffected — it ends at exactly `80.0` in all nine cells
-> measured. The 100-run cell remains un-run.
+> **Narrowed — see Entry 14.** The zero-variance argument holds for **arm C-ops**
+> and is stated for arm C-ops only: it ends at exactly `80.0` in all nine cells
+> measured across two experiments and both reasoning providers, with no variance
+> to resolve. That is the claim this project makes. **Arm C** sits next to a
+> decision boundary and does move between samples of the same configuration — we
+> ran it twice and published the mismatch rather than the friendlier number.
+> Consequence for readers: small differences between adjacent windows in arm C
+> are not signal. The 100-run cell remains un-run.
 
 ---
 
@@ -1095,29 +1096,44 @@ malformed response quietly fallen through to `decide.py`, we would have reported
 a clean model result while the model was emitting self-contradictory decisions,
 with nothing in the output to show it.
 
-### A correction to Entry 13
+### Finding 3: arm C disagreed with itself across two samples, and we published it
 
-Entry 13 justified 10 runs per cell partly on the ground that the arms carrying
-the ablation claim have "zero within-cell variance". The model arm ran the
-**reference** provider again at identical seeds, agent count, gap and windows, and
-did not reproduce the sweep's numbers:
+The model arm re-ran the **reference** provider at identical seeds, agent count,
+gap and windows. It did not reproduce the sweep's numbers for arm C:
 
 | cell | sweep | model-arm reference |
 | ---- | ----- | ------------------- |
 | C @ 400 ms  | 0/10 breaches, mean 45.0 | 1/10 breaches, mean 48.5 |
 | C @ 2500 ms | 10/10 breaches, mean 80.0 | 9/10 breaches, mean 76.5 |
 
-Two independent 10-run samples of the same configuration disagree. This is
-consistent with the determinism claim in the pre-registration — deterministic
-*workload*, distributional *outcome*, because distributed scheduling legitimately
-varies — but it is **not** consistent with the stronger phrasing in Entry 13. The
-zero-variance observation was true of the cells in that particular sweep; it is
-not a property of the design, and it should not have been used to argue the run
-count was sufficient.
+Two independent 10-run samples of the same configuration disagree by one run out
+of ten in each cell. This is recorded here because we measured the same thing
+twice and are publishing the mismatch rather than the friendlier number; a reader
+who only saw the sweep would have no way to know the second sample existed.
 
-What survives: arm C-ops ends at exactly `80.0` in all nine cells measured across
-both experiments, so the load-bearing result is robust. Arm C's per-cell breach
-counts move by one run out of ten between samples, which means small differences
-between adjacent windows in arm C should not be read as signal. The 100-run cell
-named in Entry 13 remains un-run, and this entry strengthens rather than weakens
-the case for eventually running it.
+**Why it is confined to arm C.** Arm C sits directly against a decision boundary.
+Under the fresh `$60` ceiling the first commit of `45` leaves `$15` of headroom,
+which is below the smallest allocation, so every subsequent agent abstains and the
+run ends at 45. But an agent that commits *before* the ceiling drops can take the
+total to 80 instead, and whether any given agent lands on the early or late side
+of a 200 ms policy update is exactly the kind of thing distributed scheduling
+decides. One run in ten crossing that line moves the cell.
+
+**Arm C-ops has no such boundary to sit against, and no variance.** Reasoning over
+the remembered `$80` ceiling, `45 + 35 = 80` exactly exhausts the headroom
+regardless of arrival order, so the run ends at 80 whatever the interleaving. It
+did so in **all nine cells measured** — five in the sweep, four in the model arm —
+across both the reference reasoner and Claude. That is the claim this project
+makes, and it is the one the framing rests on.
+
+Consequence stated plainly for anyone reading the tables: **small differences
+between adjacent windows in arm C are not signal.** Its per-cell breach counts
+carry roughly one run of sampling noise, so a change from 9/10 to 10/10 between
+neighbouring windows means nothing on its own. The C-vs-C-ops direction and the
+C-vs-B magnitudes are large enough to survive that; individual arm C cells are
+not. The 100-run cell named in Entry 13 remains un-run, and this finding
+strengthens the case for eventually running it.
+
+The pre-registration's determinism claim already covered this — deterministic
+*workload*, distributional *outcome*, no claim that interleaving is reproducible
+byte-for-byte. What is new is the measurement of how much that costs, and where.

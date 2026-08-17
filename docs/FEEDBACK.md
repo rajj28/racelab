@@ -232,3 +232,75 @@ is not the transaction itself, which is the right architecture anyway.
 ---
 
 *Sections on MCP read-only ergonomics to follow once that surface is in use.*
+
+---
+
+## 7. Bedrock `converse` tool use: two things that cost us a debugging cycle
+
+Both are small, both are the kind of thing that is obvious once you have hit it,
+and neither is where a reader of the API reference would expect to look.
+
+### The `enum` in a tool's `inputSchema` is not a validation boundary
+
+We declared the action space as a four-value `enum` on a required string property,
+and forced the tool with
+`toolChoice: {"tool": {"name": "submit_allocation_decision"}}`.
+
+`toolChoice` behaved exactly as documented — every response was a tool call. The
+`enum` did not constrain the value. Claude Sonnet 4.5 returned `allocate(30)`
+where the four permitted values were `allocate(45)`, `allocate(40)`,
+`allocate(35)` and `abstain`. In context this was a *reasonable* answer — `$30`
+was the exact remaining headroom — which is what makes it easy to miss: it looks
+like a valid decision rather than a schema violation.
+
+We are not reporting this as a bug. Constrained decoding against an arbitrary
+JSON Schema is a hard guarantee to offer, and the model choosing a sensible
+out-of-set value is understandable. The feedback is about **expectation setting**:
+a schema author reasonably reads `enum` as enforced, because that is what `enum`
+means everywhere else it appears. A sentence in the tool-use documentation saying
+that `inputSchema` is guidance to the model rather than a validated contract, and
+that callers must validate the returned input themselves, would have saved us the
+cycle. As it stands the safe default — validate every field you constrained — is
+discoverable only by being burned.
+
+### A correction after a forced tool call must be a `toolResult`, not a text turn
+
+Once we were validating, the natural repair is to re-ask with the violation named.
+Our first attempt appended the assistant's tool-use message followed by a normal
+user text turn explaining the problem. That fails:
+
+```
+ValidationException: The model returned the following errors: messages.2:
+`tool_use` ids were found without `tool_result` blocks immediately after:
+tooluse_ygDzP0Pqs4MRhXwf5dEYCK. Each `tool_use` block must have a
+corresponding `tool_result` block in the next message.
+```
+
+The error message is genuinely good — it names the offending message index, the
+specific `toolUseId`, and the rule. Credit where due; this is what a useful API
+error looks like, and it took one read to fix.
+
+The fix is to answer the tool call on its own terms, carrying the id back:
+
+```python
+{"role": "user", "content": [{
+    "toolResult": {
+        "toolUseId": tool_use_id,      # from the assistant's toolUse block
+        "status": "error",
+        "content": [{"text": "...why the answer was rejected..."}],
+    }
+}]}
+```
+
+That means `_extract_tool_use` has to return the `toolUseId` alongside the input,
+which is easy once you know you need it and invisible until you do. Worth a short
+"correcting a tool call" example in the docs next to the tool-use walkthrough —
+validation failure is a common path, and the shape of the correction turn is not
+guessable from the happy-path example.
+
+### Net
+
+Both of these are ergonomics rather than capability, and the underlying feature —
+forcing a specific tool to get strictly-shaped output instead of parsing prose —
+did the main job well. Out of 60 generations, one needed a repair, and the repair
+succeeded on the first re-ask.
