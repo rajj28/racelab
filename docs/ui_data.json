@@ -1,0 +1,5475 @@
+{
+ "meta": {
+  "seed": 1000,
+  "window_ms": 400,
+  "agents": 20,
+  "gap_ms": 200.0,
+  "hard_limit": 100,
+  "stale_ceiling": 80,
+  "current_ceiling": 60,
+  "retrieval_query": "What is the current authorization ceiling and spending policy for this account?",
+  "update_memory_id": "hero-m5",
+  "captured_at": "2026-08-17T09:59:42Z",
+  "provider": "reference"
+ },
+ "corpus": [
+  {
+   "memory_id": "hero-m1",
+   "kind": "policy",
+   "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review.",
+   "created_at": "2026-07-17T11:27:13.284503+00:00"
+  },
+  {
+   "memory_id": "hero-m2",
+   "kind": "history",
+   "text": "Historical allocations against this account averaged $45 per request during the previous quarter.",
+   "created_at": "2026-07-17T12:27:13.284503+00:00"
+  },
+  {
+   "memory_id": "hero-m3",
+   "kind": "note",
+   "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually.",
+   "created_at": "2026-07-17T13:27:13.284503+00:00"
+  },
+  {
+   "memory_id": "hero-m4",
+   "kind": "note",
+   "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete.",
+   "created_at": "2026-07-17T14:27:13.284503+00:00"
+  },
+  {
+   "memory_id": "hero-m5",
+   "kind": "policy",
+   "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling.",
+   "created_at": "2026-08-17T09:58:40.209042+00:00"
+  }
+ ],
+ "arms": [
+  {
+   "id": "A",
+   "label": "A \u00b7 postgres RC \u00b7 naive",
+   "backend": "pg",
+   "isolation": null,
+   "re_reason": false,
+   "refresh_memory": false,
+   "run_id": "A-w400-s1000-fc9f0b",
+   "final_sum": 135,
+   "violated_hard_limit": true,
+   "breached_policy": true,
+   "committed": 3,
+   "abstained": 17,
+   "exhausted": 0,
+   "conflicts": 0,
+   "revisions": 0,
+   "reason_calls": 20,
+   "memory_refreshes": 0,
+   "errors": 0,
+   "void_reason": null,
+   "voided": false,
+   "policy_update_ms": 528.7,
+   "agents": [
+    {
+     "arrival_ms": 16.3,
+     "finished_ms": 495.2,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-00",
+     "steps": [
+      {
+       "agent_id": "agent-00",
+       "attempt_no": 0,
+       "at_ms": 489.6,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 39.7,
+     "finished_ms": 572.1,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-01",
+     "steps": [
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 0,
+       "at_ms": 569.7,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 52.1,
+     "finished_ms": 681.2,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-02",
+     "steps": [
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 0,
+       "at_ms": 677.8,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 81.2,
+     "finished_ms": 762.4,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-03",
+     "steps": [
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 0,
+       "at_ms": 761.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 91.1,
+     "finished_ms": 886.2,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-04",
+     "steps": [
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 0,
+       "at_ms": 885.8,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 141.2,
+     "finished_ms": 1011.3,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-05",
+     "steps": [
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 0,
+       "at_ms": 1010.3,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 145.7,
+     "finished_ms": 852.4,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-06",
+     "steps": [
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 0,
+       "at_ms": 851.9,
+       "observed_sum": 90,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 90 against binding ceiling 60 (policy 60, hard limit 100); -30 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 183.2,
+     "finished_ms": 968.2,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-07",
+     "steps": [
+      {
+       "agent_id": "agent-07",
+       "attempt_no": 0,
+       "at_ms": 967.4,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 184.6,
+     "finished_ms": 1100.5,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-08",
+     "steps": [
+      {
+       "agent_id": "agent-08",
+       "attempt_no": 0,
+       "at_ms": 1099.7,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 187.2,
+     "finished_ms": 1204.0,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-09",
+     "steps": [
+      {
+       "agent_id": "agent-09",
+       "attempt_no": 0,
+       "at_ms": 1203.2,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.0,
+     "finished_ms": 1311.1,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-10",
+     "steps": [
+      {
+       "agent_id": "agent-10",
+       "attempt_no": 0,
+       "at_ms": 1310.4,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.5,
+     "finished_ms": 1419.2,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-11",
+     "steps": [
+      {
+       "agent_id": "agent-11",
+       "attempt_no": 0,
+       "at_ms": 1418.6,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 213.9,
+     "finished_ms": 1545.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-12",
+     "steps": [
+      {
+       "agent_id": "agent-12",
+       "attempt_no": 0,
+       "at_ms": 1545.2,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 266.5,
+     "finished_ms": 1642.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-13",
+     "steps": [
+      {
+       "agent_id": "agent-13",
+       "attempt_no": 0,
+       "at_ms": 1641.5,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 267.9,
+     "finished_ms": 1761.0,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-14",
+     "steps": [
+      {
+       "agent_id": "agent-14",
+       "attempt_no": 0,
+       "at_ms": 1760.0,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 268.5,
+     "finished_ms": 1923.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-15",
+     "steps": [
+      {
+       "agent_id": "agent-15",
+       "attempt_no": 0,
+       "at_ms": 1923.0,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 285.7,
+     "finished_ms": 1983.1,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-16",
+     "steps": [
+      {
+       "agent_id": "agent-16",
+       "attempt_no": 0,
+       "at_ms": 1982.0,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 310.9,
+     "finished_ms": 2067.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-17",
+     "steps": [
+      {
+       "agent_id": "agent-17",
+       "attempt_no": 0,
+       "at_ms": 2066.8,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 389.7,
+     "finished_ms": 2157.5,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-18",
+     "steps": [
+      {
+       "agent_id": "agent-18",
+       "attempt_no": 0,
+       "at_ms": 2156.8,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 391.3,
+     "finished_ms": 2259.1,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-19",
+     "steps": [
+      {
+       "agent_id": "agent-19",
+       "attempt_no": 0,
+       "at_ms": 2258.6,
+       "observed_sum": 135,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 135 against binding ceiling 60 (policy 60, hard limit 100); -75 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "sweep": {
+    "hard_limit_violations": 9,
+    "policy_breaches": 10,
+    "mean_final_sum": 196.0
+   }
+  },
+  {
+   "id": "B",
+   "label": "B \u00b7 cockroach \u00b7 naive",
+   "backend": "crdb",
+   "isolation": null,
+   "re_reason": false,
+   "refresh_memory": false,
+   "run_id": "B-w400-s1000-9e0ca2",
+   "final_sum": 135,
+   "violated_hard_limit": true,
+   "breached_policy": true,
+   "committed": 3,
+   "abstained": 10,
+   "exhausted": 7,
+   "conflicts": 39,
+   "revisions": 0,
+   "reason_calls": 20,
+   "memory_refreshes": 0,
+   "errors": 0,
+   "void_reason": null,
+   "voided": false,
+   "policy_update_ms": 580.0,
+   "agents": [
+    {
+     "arrival_ms": 16.3,
+     "finished_ms": 1581.9,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-00",
+     "steps": [
+      {
+       "agent_id": "agent-00",
+       "attempt_no": 0,
+       "at_ms": 877.7,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 39.7,
+     "finished_ms": 3171.8,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 3,
+     "reason_calls": 1,
+     "attempts_made": 4,
+     "memory_refreshes": 0,
+     "agent_id": "agent-01",
+     "steps": [
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 0,
+       "at_ms": 972.6,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 52.1,
+     "finished_ms": 3684.2,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-02",
+     "steps": [
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 0,
+       "at_ms": 1140.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 81.2,
+     "finished_ms": 3742.7,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-03",
+     "steps": [
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 0,
+       "at_ms": 1258.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 91.1,
+     "finished_ms": 3683.8,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-04",
+     "steps": [
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 0,
+       "at_ms": 1234.8,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 141.2,
+     "finished_ms": 3688.3,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-05",
+     "steps": [
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 0,
+       "at_ms": 1257.9,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 145.7,
+     "finished_ms": 3742.9,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-06",
+     "steps": [
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 0,
+       "at_ms": 1348.4,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 183.2,
+     "finished_ms": 2323.0,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 1,
+     "reason_calls": 1,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-07",
+     "steps": [
+      {
+       "agent_id": "agent-07",
+       "attempt_no": 0,
+       "at_ms": 1707.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 184.6,
+     "finished_ms": 3742.3,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-08",
+     "steps": [
+      {
+       "agent_id": "agent-08",
+       "attempt_no": 0,
+       "at_ms": 1449.8,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 187.2,
+     "finished_ms": 1914.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-09",
+     "steps": [
+      {
+       "agent_id": "agent-09",
+       "attempt_no": 0,
+       "at_ms": 1839.1,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.0,
+     "finished_ms": 3684.3,
+     "outcome": "exhausted",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 5,
+     "reason_calls": 1,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-10",
+     "steps": [
+      {
+       "agent_id": "agent-10",
+       "attempt_no": 0,
+       "at_ms": 1574.2,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.5,
+     "finished_ms": 1960.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-11",
+     "steps": [
+      {
+       "agent_id": "agent-11",
+       "attempt_no": 0,
+       "at_ms": 1919.4,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 213.9,
+     "finished_ms": 1905.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-12",
+     "steps": [
+      {
+       "agent_id": "agent-12",
+       "attempt_no": 0,
+       "at_ms": 1839.5,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 266.5,
+     "finished_ms": 2019.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-13",
+     "steps": [
+      {
+       "agent_id": "agent-13",
+       "attempt_no": 0,
+       "at_ms": 1974.4,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 267.9,
+     "finished_ms": 2032.4,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-14",
+     "steps": [
+      {
+       "agent_id": "agent-14",
+       "attempt_no": 0,
+       "at_ms": 1985.0,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 268.5,
+     "finished_ms": 1961.0,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-15",
+     "steps": [
+      {
+       "agent_id": "agent-15",
+       "attempt_no": 0,
+       "at_ms": 1919.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 285.7,
+     "finished_ms": 2080.3,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-16",
+     "steps": [
+      {
+       "agent_id": "agent-16",
+       "attempt_no": 0,
+       "at_ms": 2033.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 310.9,
+     "finished_ms": 2032.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-17",
+     "steps": [
+      {
+       "agent_id": "agent-17",
+       "attempt_no": 0,
+       "at_ms": 1983.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 389.7,
+     "finished_ms": 2037.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-18",
+     "steps": [
+      {
+       "agent_id": "agent-18",
+       "attempt_no": 0,
+       "at_ms": 1987.5,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 391.3,
+     "finished_ms": 2051.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-19",
+     "steps": [
+      {
+       "agent_id": "agent-19",
+       "attempt_no": 0,
+       "at_ms": 1993.1,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "sweep": {
+    "hard_limit_violations": 10,
+    "policy_breaches": 10,
+    "mean_final_sum": 229.5
+   }
+  },
+  {
+   "id": "C-ops",
+   "label": "C-ops \u00b7 cockroach \u00b7 re-reason, stale memory",
+   "backend": "crdb",
+   "isolation": null,
+   "re_reason": true,
+   "refresh_memory": false,
+   "run_id": "C-ops-w400-s1000-3b4779",
+   "final_sum": 80,
+   "violated_hard_limit": false,
+   "breached_policy": true,
+   "committed": 2,
+   "abstained": 13,
+   "exhausted": 5,
+   "conflicts": 35,
+   "revisions": 12,
+   "reason_calls": 50,
+   "memory_refreshes": 0,
+   "errors": 0,
+   "void_reason": null,
+   "voided": false,
+   "policy_update_ms": 811.5,
+   "agents": [
+    {
+     "arrival_ms": 16.3,
+     "finished_ms": 1993.7,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-00",
+     "steps": [
+      {
+       "agent_id": "agent-00",
+       "attempt_no": 0,
+       "at_ms": 1302.4,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 39.7,
+     "finished_ms": 4332.4,
+     "outcome": "exhausted",
+     "action": "allocate(35)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(35)",
+     "revised": true,
+     "conflicts": 5,
+     "reason_calls": 5,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-01",
+     "steps": [
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 0,
+       "at_ms": 1621.0,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 1,
+       "at_ms": 2426.3,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 2,
+       "at_ms": 3005.2,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 3,
+       "at_ms": 3546.8,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 4,
+       "at_ms": 4165.9,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 52.1,
+     "finished_ms": 4331.7,
+     "outcome": "exhausted",
+     "action": "allocate(35)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(35)",
+     "revised": true,
+     "conflicts": 5,
+     "reason_calls": 5,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-02",
+     "steps": [
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 0,
+       "at_ms": 1620.7,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 1,
+       "at_ms": 2417.9,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 2,
+       "at_ms": 3005.1,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 3,
+       "at_ms": 3544.4,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 4,
+       "at_ms": 4166.5,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 81.2,
+     "finished_ms": 4333.2,
+     "outcome": "exhausted",
+     "action": "allocate(35)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(35)",
+     "revised": true,
+     "conflicts": 5,
+     "reason_calls": 5,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-03",
+     "steps": [
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 0,
+       "at_ms": 1690.9,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 1,
+       "at_ms": 2418.4,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 2,
+       "at_ms": 3004.7,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 3,
+       "at_ms": 3545.6,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 4,
+       "at_ms": 4167.3,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 91.1,
+     "finished_ms": 4293.5,
+     "outcome": "committed",
+     "action": "allocate(35)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(35)",
+     "revised": true,
+     "conflicts": 4,
+     "reason_calls": 5,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-04",
+     "steps": [
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 0,
+       "at_ms": 1795.0,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 1,
+       "at_ms": 2426.0,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 2,
+       "at_ms": 3004.0,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 3,
+       "at_ms": 3546.1,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 4,
+       "at_ms": 4167.7,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 141.2,
+     "finished_ms": 4332.9,
+     "outcome": "exhausted",
+     "action": "allocate(35)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(35)",
+     "revised": true,
+     "conflicts": 5,
+     "reason_calls": 5,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-05",
+     "steps": [
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 0,
+       "at_ms": 1812.6,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 1,
+       "at_ms": 2426.9,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 2,
+       "at_ms": 3004.9,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 3,
+       "at_ms": 3546.5,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 4,
+       "at_ms": 4165.3,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 145.7,
+     "finished_ms": 4332.1,
+     "outcome": "exhausted",
+     "action": "allocate(35)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(35)",
+     "revised": true,
+     "conflicts": 5,
+     "reason_calls": 5,
+     "attempts_made": 5,
+     "memory_refreshes": 0,
+     "agent_id": "agent-06",
+     "steps": [
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 0,
+       "at_ms": 1898.4,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 1,
+       "at_ms": 2418.8,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 2,
+       "at_ms": 3004.4,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 3,
+       "at_ms": 3544.9,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 4,
+       "at_ms": 4167.0,
+       "observed_sum": 45,
+       "action": "allocate(35)",
+       "amount": 35,
+       "inferred_ceiling": 80,
+       "rationale": "observed 45 against binding ceiling 80 (policy 80, hard limit 100); 35 remaining, so 35 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 183.2,
+     "finished_ms": 2671.7,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-07",
+     "steps": [
+      {
+       "agent_id": "agent-07",
+       "attempt_no": 0,
+       "at_ms": 2096.6,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-07",
+       "attempt_no": 1,
+       "at_ms": 2595.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 184.6,
+     "finished_ms": 2670.5,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-08",
+     "steps": [
+      {
+       "agent_id": "agent-08",
+       "attempt_no": 0,
+       "at_ms": 2097.2,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-08",
+       "attempt_no": 1,
+       "at_ms": 2596.2,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 187.2,
+     "finished_ms": 2734.7,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-09",
+     "steps": [
+      {
+       "agent_id": "agent-09",
+       "attempt_no": 0,
+       "at_ms": 2156.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-09",
+       "attempt_no": 1,
+       "at_ms": 2660.6,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.0,
+     "finished_ms": 2736.2,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-10",
+     "steps": [
+      {
+       "agent_id": "agent-10",
+       "attempt_no": 0,
+       "at_ms": 2161.6,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-10",
+       "attempt_no": 1,
+       "at_ms": 2660.1,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.5,
+     "finished_ms": 2735.5,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-11",
+     "steps": [
+      {
+       "agent_id": "agent-11",
+       "attempt_no": 0,
+       "at_ms": 2164.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-11",
+       "attempt_no": 1,
+       "at_ms": 2660.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 213.9,
+     "finished_ms": 2735.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 0,
+     "agent_id": "agent-12",
+     "steps": [
+      {
+       "agent_id": "agent-12",
+       "attempt_no": 0,
+       "at_ms": 2164.8,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-12",
+       "attempt_no": 1,
+       "at_ms": 2659.6,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 266.5,
+     "finished_ms": 2250.0,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-13",
+     "steps": [
+      {
+       "agent_id": "agent-13",
+       "attempt_no": 0,
+       "at_ms": 2195.6,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 267.9,
+     "finished_ms": 2283.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-14",
+     "steps": [
+      {
+       "agent_id": "agent-14",
+       "attempt_no": 0,
+       "at_ms": 2217.5,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 268.5,
+     "finished_ms": 2284.7,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-15",
+     "steps": [
+      {
+       "agent_id": "agent-15",
+       "attempt_no": 0,
+       "at_ms": 2246.3,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 285.7,
+     "finished_ms": 2285.0,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-16",
+     "steps": [
+      {
+       "agent_id": "agent-16",
+       "attempt_no": 0,
+       "at_ms": 2216.5,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 310.9,
+     "finished_ms": 2283.3,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-17",
+     "steps": [
+      {
+       "agent_id": "agent-17",
+       "attempt_no": 0,
+       "at_ms": 2216.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 389.7,
+     "finished_ms": 2285.4,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-18",
+     "steps": [
+      {
+       "agent_id": "agent-18",
+       "attempt_no": 0,
+       "at_ms": 2246.7,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 391.3,
+     "finished_ms": 2345.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-19",
+     "steps": [
+      {
+       "agent_id": "agent-19",
+       "attempt_no": 0,
+       "at_ms": 2300.0,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "sweep": {
+    "hard_limit_violations": 0,
+    "policy_breaches": 10,
+    "mean_final_sum": 80.0
+   }
+  },
+  {
+   "id": "C",
+   "label": "C \u00b7 cockroach \u00b7 full refresh",
+   "backend": "crdb",
+   "isolation": null,
+   "re_reason": true,
+   "refresh_memory": true,
+   "run_id": "C-w400-s1000-ff1493",
+   "final_sum": 45,
+   "violated_hard_limit": false,
+   "breached_policy": false,
+   "committed": 1,
+   "abstained": 19,
+   "exhausted": 0,
+   "conflicts": 12,
+   "revisions": 12,
+   "reason_calls": 32,
+   "memory_refreshes": 12,
+   "errors": 0,
+   "void_reason": null,
+   "voided": false,
+   "policy_update_ms": 745.0,
+   "agents": [
+    {
+     "arrival_ms": 16.3,
+     "finished_ms": 1944.5,
+     "outcome": "committed",
+     "action": "allocate(45)",
+     "decision_before": "allocate(45)",
+     "decision_after": "allocate(45)",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-00",
+     "steps": [
+      {
+       "agent_id": "agent-00",
+       "attempt_no": 0,
+       "at_ms": 1093.0,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 39.7,
+     "finished_ms": 3076.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-01",
+     "steps": [
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 0,
+       "at_ms": 1265.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-01",
+       "attempt_no": 1,
+       "at_ms": 2746.2,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 52.1,
+     "finished_ms": 3172.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-02",
+     "steps": [
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 0,
+       "at_ms": 1494.5,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-02",
+       "attempt_no": 1,
+       "at_ms": 2785.3,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 81.2,
+     "finished_ms": 3173.7,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-03",
+     "steps": [
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 0,
+       "at_ms": 1494.3,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-03",
+       "attempt_no": 1,
+       "at_ms": 2791.0,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 91.1,
+     "finished_ms": 3173.3,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-04",
+     "steps": [
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 0,
+       "at_ms": 1599.9,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-04",
+       "attempt_no": 1,
+       "at_ms": 2790.7,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 141.2,
+     "finished_ms": 3174.2,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-05",
+     "steps": [
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 0,
+       "at_ms": 1750.7,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-05",
+       "attempt_no": 1,
+       "at_ms": 2790.4,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 145.7,
+     "finished_ms": 3173.5,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-06",
+     "steps": [
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 0,
+       "at_ms": 1844.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-06",
+       "attempt_no": 1,
+       "at_ms": 2960.3,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 183.2,
+     "finished_ms": 3439.4,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-07",
+     "steps": [
+      {
+       "agent_id": "agent-07",
+       "attempt_no": 0,
+       "at_ms": 2029.3,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 80,
+       "rationale": "observed 0 against binding ceiling 80 (policy 80, hard limit 100); 80 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m1",
+         "kind": "policy",
+         "text": "Temporary authorization ceiling for this account is $80 per billing cycle, pending completion of the quarterly review."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-07",
+       "attempt_no": 1,
+       "at_ms": 3379.2,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 184.6,
+     "finished_ms": 3439.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-08",
+     "steps": [
+      {
+       "agent_id": "agent-08",
+       "attempt_no": 0,
+       "at_ms": 2119.7,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-08",
+       "attempt_no": 1,
+       "at_ms": 3383.7,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 187.2,
+     "finished_ms": 3469.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-09",
+     "steps": [
+      {
+       "agent_id": "agent-09",
+       "attempt_no": 0,
+       "at_ms": 2132.1,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-09",
+       "attempt_no": 1,
+       "at_ms": 3419.1,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.0,
+     "finished_ms": 3469.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-10",
+     "steps": [
+      {
+       "agent_id": "agent-10",
+       "attempt_no": 0,
+       "at_ms": 2140.6,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-10",
+       "attempt_no": 1,
+       "at_ms": 3424.7,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 195.5,
+     "finished_ms": 3470.0,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-11",
+     "steps": [
+      {
+       "agent_id": "agent-11",
+       "attempt_no": 0,
+       "at_ms": 2145.8,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-11",
+       "attempt_no": 1,
+       "at_ms": 3419.3,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 213.9,
+     "finished_ms": 3457.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "allocate(45)",
+     "decision_after": "abstain",
+     "revised": true,
+     "conflicts": 1,
+     "reason_calls": 2,
+     "attempts_made": 2,
+     "memory_refreshes": 1,
+     "agent_id": "agent-12",
+     "steps": [
+      {
+       "agent_id": "agent-12",
+       "attempt_no": 0,
+       "at_ms": 2144.9,
+       "observed_sum": 0,
+       "action": "allocate(45)",
+       "amount": 45,
+       "inferred_ceiling": 60,
+       "rationale": "observed 0 against binding ceiling 60 (policy 60, hard limit 100); 60 remaining, so 45 fits",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      },
+      {
+       "agent_id": "agent-12",
+       "attempt_no": 1,
+       "at_ms": 3418.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 266.5,
+     "finished_ms": 2534.4,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-13",
+     "steps": [
+      {
+       "agent_id": "agent-13",
+       "attempt_no": 0,
+       "at_ms": 2146.1,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 267.9,
+     "finished_ms": 2536.7,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-14",
+     "steps": [
+      {
+       "agent_id": "agent-14",
+       "attempt_no": 0,
+       "at_ms": 2182.0,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 268.5,
+     "finished_ms": 2533.9,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-15",
+     "steps": [
+      {
+       "agent_id": "agent-15",
+       "attempt_no": 0,
+       "at_ms": 2191.7,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 285.7,
+     "finished_ms": 2534.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-16",
+     "steps": [
+      {
+       "agent_id": "agent-16",
+       "attempt_no": 0,
+       "at_ms": 2191.5,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 310.9,
+     "finished_ms": 2538.6,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-17",
+     "steps": [
+      {
+       "agent_id": "agent-17",
+       "attempt_no": 0,
+       "at_ms": 2197.6,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 389.7,
+     "finished_ms": 2540.3,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-18",
+     "steps": [
+      {
+       "agent_id": "agent-18",
+       "attempt_no": 0,
+       "at_ms": 2197.9,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "arrival_ms": 391.3,
+     "finished_ms": 2540.8,
+     "outcome": "abstained",
+     "action": "abstain",
+     "decision_before": "abstain",
+     "decision_after": "abstain",
+     "revised": false,
+     "conflicts": 0,
+     "reason_calls": 1,
+     "attempts_made": 1,
+     "memory_refreshes": 0,
+     "agent_id": "agent-19",
+     "steps": [
+      {
+       "agent_id": "agent-19",
+       "attempt_no": 0,
+       "at_ms": 2240.5,
+       "observed_sum": 45,
+       "action": "abstain",
+       "amount": null,
+       "inferred_ceiling": 60,
+       "rationale": "observed 45 against binding ceiling 60 (policy 60, hard limit 100); 15 remaining, smaller than the smallest option 35",
+       "memory_ids": [],
+       "memories": [
+        {
+         "memory_id": "hero-m5",
+         "kind": "policy",
+         "text": "Authorization ceiling reduced to $60 per billing cycle, effective immediately, superseding the prior temporary ceiling."
+        },
+        {
+         "memory_id": "hero-m2",
+         "kind": "history",
+         "text": "Historical allocations against this account averaged $45 per request during the previous quarter."
+        },
+        {
+         "memory_id": "hero-m3",
+         "kind": "note",
+         "text": "The primary contact for this account is the procurement team, who prefer approvals to be batched rather than issued individually."
+        },
+        {
+         "memory_id": "hero-m4",
+         "kind": "note",
+         "text": "This account was migrated from the legacy billing system in March and its historical records before that date are incomplete."
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "sweep": {
+    "hard_limit_violations": 0,
+    "policy_breaches": 0,
+    "mean_final_sum": 45.0
+   }
+  }
+ ]
+}

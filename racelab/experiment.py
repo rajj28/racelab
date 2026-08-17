@@ -128,12 +128,20 @@ def reset_run_state(config: RunConfig) -> None:
         )
 
 
-def run_once(config: RunConfig, embedder, reason_for, memory_pool=None) -> RunOutcome:
+def run_once(config: RunConfig, embedder, reason_for, memory_pool=None,
+             observer=None) -> RunOutcome:
     """One run of one arm.
 
     `reason_for(memories, observed, hard_limit) -> Decision` is injected so the
     same harness drives the deterministic reference and the cached model
     intents without knowing which it has.
+
+    `observer` is optional instrumentation, used to build the inspection UI. It
+    changes nothing about what is measured -- no arm, window, metric or run
+    depends on it -- it only reports moments the aggregate `RunOutcome` throws
+    away: when the threads were released, each decision as it was made, the
+    policy update landing, and each agent's final result. Any of its four hooks
+    may be absent.
     """
     arm, sc = config.arm, config.scenario
     run_id = f"{arm.id.value}-w{config.arrival_window_ms}-s{config.seed}-{uuid.uuid4().hex[:6]}"
@@ -177,6 +185,21 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None) -> RunOu
     # write land up to 900 ms after its scheduled time.
     embedder.embed(sc.update_memory.text)  # warm the cache off the critical path
 
+    def _notify(hook: str, **kw) -> None:
+        """Call an observer hook if it exists. Instrumentation must never be able
+        to fail a run, so a broken observer is swallowed rather than propagated
+        into the measurement."""
+        if observer is None:
+            return
+        fn = getattr(observer, hook, None)
+        if fn is None:
+            return
+        try:
+            with lock:
+                fn(**kw)
+        except Exception:  # noqa: BLE001 - instrumentation is not the experiment
+            pass
+
     def agent(index: int, offset: float) -> None:
         started.wait()
         time.sleep(offset)
@@ -212,7 +235,10 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None) -> RunOu
             if ctx.attempt_no > 0:
                 with lock:
                     outcome.redecision_reads.append(ctx.observed)
-            return reason_for(ctx.memory or [], ctx.observed, sc.hard_limit)
+            decision = reason_for(ctx.memory or [], ctx.observed, sc.hard_limit)
+            _notify("on_decision", agent_id=agent_id, arrival_offset=offset,
+                    ctx=ctx, decision=decision, at=time.perf_counter())
+            return decision
 
         wrapper = ConflictAware(
             operational_read=read_sum,
@@ -231,6 +257,8 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None) -> RunOu
             result = wrapper.run(agent_conns[index], agent_id=agent_id, run_id=run_id)
             with lock:
                 results.append(result)
+            _notify("on_result", agent_id=agent_id, arrival_offset=offset,
+                    result=result, at=time.perf_counter())
         except ArmCollapse as exc:
             with lock:
                 outcome.voided = True
@@ -253,12 +281,15 @@ def run_once(config: RunConfig, embedder, reason_for, memory_pool=None) -> RunOu
             supersedes=seed_mem.supersedes,
             created_at=datetime.datetime.now(datetime.timezone.utc),
         )
+        _notify("on_policy_update", at=time.perf_counter())
 
     threads = [threading.Thread(target=agent, args=(i, off))
                for i, off in enumerate(offsets)]
     threads.append(threading.Thread(target=policy_updater))
     for t in threads:
         t.start()
+    _notify("on_release", at=time.perf_counter(), offsets=offsets, run_id=run_id,
+            arm_id=arm.id.value, scenario=sc)
     started.set()
     for t in threads:
         t.join(timeout=120)
