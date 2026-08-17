@@ -1,0 +1,45 @@
+Reconciling METHODOLOGY entry 1 against the swept arm B
+============================================================================================
+CockroachDB, 20 agents, 400 ms window, 200 ms gap, hard limit $100, 3 repeats each.
+
+Varying one factor at a time, from the gate configuration to arm B:
+
+  1. gate: one attempt, fixed $40, no abstain          sums=[80, 80, 80] mean=  80.0 violated=0/3 commits=  6 conflicts=  54 exhausted= 54
+  2. + retry up to 5 attempts                          sums=[240, 240, 240] mean= 240.0 violated=3/3 commits= 18 conflicts= 247 exhausted= 42
+  3. + memory-driven amount (ceiling $80)              sums=[255, 220, 220] mean= 231.7 violated=3/3 commits= 19 conflicts= 247 exhausted= 41
+  4. + abstention                                      sums=[80, 80, 80] mean=  80.0 violated=0/3 commits=  6 conflicts=  80 exhausted=  0
+  5. + decision carried across restarts (= arm B naive) sums=[260, 170, 260] mean= 230.0 violated=3/3 commits= 16 conflicts= 256 exhausted= 44
+  6. + pre-opened connections  (= arm B as swept)      sums=[250, 170, 260] mean= 226.7 violated=3/3 commits= 16 conflicts= 255 exhausted= 44
+
+============================================================================================
+Attribution
+
+  + retry up to 5 attempts                           +160.0 mean final sum
+  + memory-driven amount (ceiling $80)                 -8.3 mean final sum
+  + abstention                                       -151.7 mean final sum
+  + decision carried across restarts (= arm B naive)   +150.0 mean final sum
+  + pre-opened connections  (= arm B as swept)         -3.3 mean final sum
+
+  total change from gate to arm B                    +146.7
+
+The load-bearing contrast: configurations 4 and 5
+
+  re-decides on every attempt   mean   80.0   violated 0/3
+  carries the first decision    mean  230.0   violated 3/3
+
+  Both retry. Both re-read the sum inside the new transaction. Both
+  may abstain. The only difference is whether the new reading is
+  allowed to change the action -- and that difference is the whole
+  gap between holding the invariant and violating it every time.
+
+  This reproduces the project's central claim in a standalone script
+  with no part of the racelab package involved.
+
+============================================================================================
+Both tables are correct for the configuration each measured. The gate
+asked whether a serialization failure could be produced at all, and a
+transaction that abandons its work on one cannot violate anything --
+its 0/3 is the signature of giving up, not of being safe. Arm B is
+retry middleware: it does not give up, and it does not reconsider.
+
+METHODOLOGY entry 12 records this.
