@@ -10,6 +10,36 @@ What was actually missing was a **schema shaped for an agent to query**. That is
 what `MCP_VIEWS` in `racelab/schema.py` provides, and it is designed around the
 managed server's documented limits rather than in spite of them.
 
+## Verified, not just documented
+
+`scripts/mcp_query.py` opens a real MCP session over Streamable HTTP against
+`https://cockroachlabs.cloud/mcp` — `initialize`, `tools/list`, `tools/call` —
+and runs the queries below. Transcript in `results/mcp_session.txt`.
+
+```
+MCP  https://cockroachlabs.cloud/mcp
+     organization concentrix (session from `ccloud auth login`)
+     cluster blast-avocet (a35744e4...) resolved from the DSN via ccloud
+     connected: cockroachdb-cloud 1.0.0 (protocol 2025-06-18)
+     12 tools available; using select_query on database 'racelab'
+```
+
+The cluster id is **resolved rather than hardcoded**: the DSN hostname names the
+cluster, `ccloud cluster list` maps that name to an id, and the MCP session is
+scoped to the same cluster the experiment ran on. Hardcoding would have been
+shorter and would have silently queried the wrong cluster the moment the account
+had two — which it now does.
+
+Four things the schema told us that the prose did not, all found by calling it:
+
+- the parameter is **`query`**, not `statement`
+- **`database` is required** — the server does not infer it from the cluster
+- `cluster_id` must be **omitted** when the config already sets it, and the
+  server refuses the request if you send both. It is right to: two sources for
+  one setting is how they end up disagreeing.
+- `select_query` **automatically adds `LIMIT 25`**, which is exactly the
+  constraint these views were shaped around
+
 ## Connect
 
 Add to your MCP client config (Claude Code, Cursor, VS Code):

@@ -1,0 +1,28 @@
+MCP  https://cockroachlabs.cloud/mcp
+     organization concentrix (session from `ccloud auth login`)
+     cluster blast-avocet (a35744e4...) resolved from the DSN via ccloud
+     connected: cockroachdb-cloud 1.0.0 (protocol 2025-06-18)
+
+     12 tools available; using select_query
+
+==============================================================================
+How did the five approaches compare?
+  SELECT * FROM race_arm_comparison
+------------------------------------------------------------------------------
+{"rows":[{"arm":"A-rc","runs":73,"runs_over_hard_limit":71,"avg_final_sum":372.5,"worst_final_sum":810,"hard_limit":100},{"arm":"A","runs":1,"runs_over_hard_limit":1,"avg_final_sum":135.0,"worst_final_sum":135,"hard_limit":100},{"arm":"B","runs":371,"runs_over_hard_limit":356,"avg_final_sum":203.6,"worst_final_sum":330,"hard_limit":100},{"arm":"C-ops","runs":479,"runs_over_hard_limit":0,"avg_final_sum":72.7,"worst_final_sum":80,"hard_limit":100},{"arm":"C","runs":459,"runs_over_hard_limit":0,"avg_final_sum":58.4,"worst_final_sum":80,"hard_limit":100}]}
+
+==============================================================================
+Which ceiling did each arm actually reason with? (the ablation)
+  SELECT arm, inferred_ceiling, count(*) AS decisions FROM race_agent_decisions WHERE arm IS NOT NULL GROUP BY arm, inferred_ceiling ORDER BY arm, inferred_ceiling
+------------------------------------------------------------------------------
+{"rows":[{"arm":"A","inferred_ceiling":60,"decisions":17},{"arm":"A","inferred_ceiling":80,"decisions":3},{"arm":"B","inferred_ceiling":60,"decisions":13},{"arm":"B","inferred_ceiling":80,"decisions":7},{"arm":"C","inferred_ceiling":60,"decisions":24},{"arm":"C","inferred_ceiling":80,"decisions":8},{"arm":"C-ops","inferred_ceiling":60,"decisions":19},{"arm":"C-ops","inferred_ceiling":80,"decisions":31}]}
+
+==============================================================================
+Where did each arm top out?
+  SELECT arm, max(resulting_total) AS highest_total FROM race_agent_decisions WHERE arm IS NOT NULL GROUP BY arm ORDER BY arm
+------------------------------------------------------------------------------
+{"rows":[{"arm":"A","highest_total":135},{"arm":"B","highest_total":45},{"arm":"C","highest_total":45},{"arm":"C-ops","highest_total":80}]}
+
+==============================================================================
+Answered by CockroachDB Cloud's Managed MCP Server, over its own
+select_query tool. No RaceLab code took part in producing these rows.
