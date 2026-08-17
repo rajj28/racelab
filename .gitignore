@@ -29,3 +29,9 @@ data/
 # discusses the sweep we discarded, and a reader should be able to see what was
 # actually thrown away rather than take our description of it on trust. That
 # directory carries its own README marking it do-not-cite.
+
+# Build output. The Lambda layer is 23 MB of vendored psycopg wheels rebuilt by
+# `pip install --platform manylinux2014_x86_64 --target build/layer/python`;
+# deploy/deploy.py documents the command. Vendored dependencies in a repo are
+# noise for a reader and drift from what is actually deployed.
+build/
