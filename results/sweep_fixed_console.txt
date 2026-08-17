@@ -1,0 +1,43 @@
+RaceLab sweep — 10 runs/arm/window, 20 agents/run
+windows: [400, 1000, 1500, 2500, 4000] ms | reasoning gap 200.0 ms
+reasoning provider: reference
+hard limit $100, ceiling $80 -> $60 mid-run
+
+  w=  400  A · postgres RC · naive                      limit   9/10  policy  10/10  mean sum  196.0 conflicts    0 revisions    0
+  w=  400  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  229.5 conflicts  600 revisions    0
+  w=  400  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  183 revisions  114
+  w=  400  C · cockroach · full refresh                 limit   0/10  policy   0/10  mean sum   45.0 conflicts  131 revisions  131
+
+  w= 1000  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  190.0 conflicts    0 revisions    0
+  w= 1000  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  254.5 conflicts  407 revisions    0
+  w= 1000  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  138 revisions   97
+  w= 1000  C · cockroach · full refresh                 limit   0/10  policy   3/10  mean sum   55.5 conflicts   98 revisions   98
+
+  w= 1500  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  143.0 conflicts    0 revisions    0
+  w= 1500  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  248.0 conflicts  326 revisions    0
+  w= 1500  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  127 revisions   74
+  w= 1500  C · cockroach · full refresh                 limit   0/10  policy  10/10  mean sum   80.0 conflicts   82 revisions   75
+
+  w= 2500  A · postgres RC · naive                      limit   9/10  policy  10/10  mean sum  147.5 conflicts    0 revisions    0
+  w= 2500  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  214.5 conflicts  253 revisions    0
+  w= 2500  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts   95 revisions   56
+  w= 2500  C · cockroach · full refresh                 limit   0/10  policy  10/10  mean sum   80.0 conflicts   55 revisions   47
+
+  w= 4000  A · postgres RC · naive                      limit   8/10  policy  10/10  mean sum  125.0 conflicts    0 revisions    0
+  w= 4000  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  189.0 conflicts   89 revisions    0
+  w= 4000  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts   49 revisions   34
+  w= 4000  C · cockroach · full refresh                 limit   0/10  policy  10/10  mean sum   80.0 conflicts   48 revisions   38
+
+Traceback (most recent call last):
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 345, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Users\INDIA\racelab\scripts\run_sweep.py", line 155, in main
+    (RESULTS / args.out).write_text(report, encoding="utf-8")
+  File "C:\Users\INDIA\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1047, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\INDIA\AppData\Local\Programs\Python\Python312\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\INDIA\\racelab\\results\\results\\sweep_fixed'
