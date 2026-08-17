@@ -19,3 +19,14 @@ hard limit $100, ceiling $80 -> $60 mid-run
   w= 1500  A-rc · cockroach RC · naive                  limit  10/10  policy  10/10  mean sum  250.0 conflicts    0 revisions    0
   w= 1500  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  246.0 conflicts  299 revisions    0
   w= 1500  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts  122 revisions   88
+  w= 1500  C · cockroach · full refresh                 limit   0/10  policy   8/10  mean sum   73.0 conflicts   86 revisions   75
+
+  w= 2500  A · postgres RC · naive                      limit  10/10  policy  10/10  mean sum  169.0 conflicts    0 revisions    0
+  w= 2500  A-rc · cockroach RC · naive                  limit   9/10  policy  10/10  mean sum  212.5 conflicts    0 revisions    0
+  w= 2500  B · cockroach · naive                        limit  10/10  policy  10/10  mean sum  230.5 conflicts  186 revisions    0
+  w= 2500  C-ops · cockroach · re-reason, stale memory  limit   0/10  policy  10/10  mean sum   80.0 conflicts   94 revisions   65
+  w= 2500  C · cockroach · full refresh                 limit   0/10  policy   7/10  mean sum   69.5 conflicts   77 revisions   73
+
+  w= 4000  A · postgres RC · naive                      limit   6/10  policy  10/10  mean sum  116.5 conflicts    0 revisions    0
+  w= 4000  A-rc · cockroach RC · naive                  limit   9/10  policy  10/10  mean sum  222.0 conflicts    0 revisions    0
+  w= 4000  B · cockroach · naive                        limit   7/10  policy   7/10  mean sum  154.5 conflicts  111 revisions    0

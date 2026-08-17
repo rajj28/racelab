@@ -110,6 +110,11 @@ class DecisionContext:
     memory: Any
     observed: Any
     previous: Proposal | None
+    # Why the previous attempt's action was refused by the constraint, if it
+    # was. Passed so the reasoning step can be told what was wrong with its last
+    # answer rather than having to guess -- a model given "that would exceed the
+    # ceiling you inferred" can correct itself; a model given nothing repeats.
+    refused: str | None = None
 
 
 # Injected by the caller. Signatures are the entire public contract.
@@ -118,6 +123,27 @@ OperationalRead = Callable[[psycopg.Cursor], Any]  # runs INSIDE the transaction
 Reason = Callable[[DecisionContext], Proposal]
 Apply = Callable[[psycopg.Cursor, Proposal], bool]  # returns "did it write?"
 Invariant = Callable[[psycopg.Cursor, Proposal], None]  # raises to abort
+
+# Returns None when the state the transaction is about to commit satisfies the
+# constraint, or a human-readable reason when it does not. Runs INSIDE the
+# transaction, after `apply`, before `COMMIT`.
+#
+# This is the difference between observing a violation and preventing one, and
+# the placement is the whole reason it works:
+#
+#   * Checking *outside* the transaction is racy under any isolation level --
+#     state can change between the check and the commit.
+#   * Checking *inside* the transaction is still racy under READ COMMITTED,
+#     because another writer can commit underneath you and your check saw a
+#     snapshot that no longer holds.
+#   * Checking inside the transaction under SERIALIZABLE is **sound**: either the
+#     state you verified is the state you commit, or the commit is refused with a
+#     40001 and the whole cycle runs again.
+#
+# So serializable isolation is not merely a way to detect the problem. It is what
+# makes agent-level constraint enforcement possible at all, because it is what
+# lets a check performed before the commit still be true after it.
+Constraint = Callable[[psycopg.Cursor, Proposal], "str | None"]
 
 
 # --------------------------------------------------------------------------
@@ -155,6 +181,13 @@ class RunResult:
     # from C only in whether this happens, so it is instrumented rather than
     # assumed. C-ops must end every run with memory_refreshes == 0.
     memory_refreshes: int = 0
+    # Times the constraint refused the action the agent chose. NOT counted as
+    # conflicts: a refusal is the agent contradicting a rule it is subject to,
+    # which is a different event from the database being unable to serialize.
+    # Conflating them would let a well-behaved agent under contention look
+    # identical to a misbehaving one.
+    refusals: int = 0
+    refused_actions: tuple[str, ...] = ()
 
     @property
     def revised(self) -> bool:
@@ -177,6 +210,22 @@ class RunResult:
 # --------------------------------------------------------------------------
 # The arm-collapse guard
 # --------------------------------------------------------------------------
+
+
+class ConstraintRefused(Exception):
+    """Raised inside a transaction when the constraint rejects what was written.
+
+    Internal to `run`, which rolls back and re-decides. It is not a `psycopg`
+    error and must not be handled as one: the database was perfectly willing to
+    commit this, which is exactly the problem. The refusal comes from the
+    application's own rule, checked at the only moment where checking it is
+    sound.
+    """
+
+    def __init__(self, reason: str, proposal: Proposal):
+        super().__init__(reason)
+        self.reason = reason
+        self.proposal = proposal
 
 
 class ArmCollapse(AssertionError):
@@ -411,6 +460,18 @@ class ConflictAware:
         # racelab/arms.py.
         refresh_memory_on_conflict: bool = True,
         invariant: Invariant | None = None,
+        # The guardrail. When supplied, `run` will not commit a state this
+        # rejects: it rolls back, tells the reasoning step why, and lets it try
+        # again, up to `max_refusals` times. If the agent still cannot satisfy
+        # it, the run ends `refused` having written nothing.
+        #
+        # This is orthogonal to `re_reason`, and deliberately so. A naive agent
+        # with a constraint cannot correct itself -- it replays -- so it will
+        # exhaust its refusals and decline to write. That is the point: the
+        # guarantee holds even when the policy is the bad one. Re-reasoning is
+        # what turns "safely refused" into "correctly committed".
+        constraint: Constraint | None = None,
+        max_refusals: int = 3,
         conflict_partners: Callable[[psycopg.Connection], Sequence[str]] | None = None,
         isolation: str | None = None,
         max_attempts: int = 5,
@@ -424,6 +485,8 @@ class ConflictAware:
         self.refresh_memory = refresh_memory
         self.refresh_memory_on_conflict = refresh_memory_on_conflict
         self.invariant = invariant
+        self.constraint = constraint
+        self.max_refusals = max_refusals
         self.conflict_partners = conflict_partners
         self.isolation = isolation
         self.max_attempts = max_attempts
@@ -454,6 +517,9 @@ class ConflictAware:
 
         memory = self.refresh_memory(agent_id) if self.refresh_memory else None
         proposal: Proposal | None = None
+        # Carries the constraint's reason into the next reasoning call. Cleared
+        # once delivered, so a later attempt is not told about an old refusal.
+        refused: str | None = None
 
         # Count calls to the reasoning function here, inside the library, so
         # the arm-collapse guard runs on what the mechanism actually did rather
@@ -483,8 +549,43 @@ class ConflictAware:
                 proposal, wrote = self._attempt(
                     conn, agent_id=agent_id, run_id=run_id, attempt_no=attempt_no,
                     memory=memory, carried=proposal, result=result, holder=holder,
-                    reason=counted,
+                    reason=counted, refused=refused,
                 )
+                refused = None
+            except ConstraintRefused as exc:
+                # The database would have committed this. Our own rule would not.
+                self._rollback(conn)
+                record.ended_at = datetime.datetime.now(datetime.timezone.utc)
+                record.outcome = "refused"
+                record.action = exc.proposal.action
+                result.refusals += 1
+                result.refused_actions = result.refused_actions + (exc.proposal.action,)
+                self._emit_attempt(run_id, agent_id, policy, record, attempt_no)
+
+                if result.refusals > self.max_refusals:
+                    # Out of chances. Write nothing. This is the guarantee: with
+                    # a constraint supplied, a violating state is never committed,
+                    # whatever the reasoning step keeps proposing.
+                    result.outcome = "refused"
+                    result.action = None
+                    result.error = (
+                        f"constraint refused {result.refusals} action(s) "
+                        f"({', '.join(result.refused_actions)}); nothing written: "
+                        f"{exc.reason}"
+                    )
+                    return self._finish(result, calls["n"])
+
+                refused = exc.reason
+                if self.re_reason:
+                    proposal = None       # force a fresh decision
+                else:
+                    # A naive agent cannot use the feedback -- replaying is what
+                    # makes it naive -- so it will burn through max_refusals and
+                    # decline. That is the intended outcome: the guardrail holds
+                    # even when the policy cannot fix itself.
+                    proposal = holder.get("proposal")
+                continue
+
             except psycopg.Error as exc:
                 self._rollback(conn)
                 record.ended_at = datetime.datetime.now(datetime.timezone.utc)
@@ -570,6 +671,23 @@ class ConflictAware:
                 f"the naive policy, so the arms are not distinct."
             )
 
+        # The guardrail's guarantee, asserted rather than trusted: an action the
+        # constraint refused must never be the action that committed. The
+        # structural reason it holds is that the check runs before COMMIT, but a
+        # future edit could move it, and this is the assertion that would catch
+        # that rather than letting a violating write ship quietly.
+        if (
+            result.outcome == "committed"
+            and result.action is not None
+            and result.action in result.refused_actions
+        ):
+            raise ArmCollapse(
+                f"run for {result.agent_id} committed {result.action!r}, which the "
+                f"constraint had already refused (refused: "
+                f"{', '.join(result.refused_actions)}). The guardrail is not "
+                f"holding, and a violating state has been made durable."
+            )
+
         # The C-ops ablation is defined by NOT refreshing memory. If it ever
         # does, it has silently become the C arm, and the decomposition it
         # exists to produce -- how much of the effect is the operational
@@ -611,6 +729,7 @@ class ConflictAware:
         result: RunResult,
         holder: dict[str, Proposal],
         reason: Reason,
+        refused: str | None = None,
     ) -> tuple[Proposal, bool]:
         begin = "BEGIN"
         if self.isolation:
@@ -635,6 +754,7 @@ class ConflictAware:
                 proposal = reason(DecisionContext(
                     agent_id=agent_id, attempt_no=attempt_no,
                     memory=memory, observed=observed, previous=result_previous(result),
+                    refused=refused,
                 ))
 
             holder["proposal"] = proposal
@@ -654,6 +774,17 @@ class ConflictAware:
             wrote = self.apply(cur, proposal)
             if self.invariant is not None:
                 self.invariant(cur, proposal)
+
+            # The guardrail, checked here and nowhere else. `apply` has already
+            # written, so the constraint sees the state this transaction is about
+            # to make durable -- not the state it started from. Under
+            # SERIALIZABLE that is the same state that will exist after COMMIT,
+            # or the COMMIT is refused with a 40001. Under READ COMMITTED it is
+            # not, which is why this guarantee is isolation-dependent and says so.
+            if self.constraint is not None and wrote:
+                refusal = self.constraint(cur, proposal)
+                if refusal:
+                    raise ConstraintRefused(refusal, proposal)
 
         conn.execute("COMMIT")
         return proposal, wrote

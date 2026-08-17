@@ -34,6 +34,8 @@ SUITE = [
      "four arms, and the ablation decomposed", True),
     # Needs a live cluster but no Bedrock: the reasoning step is a
     # RunnableLambda, so no embeddings or model calls are involved.
+    ("guardrail", "test_guardrail.py",
+     "a constraint checked before commit is enforced, not merely observed", False),
     ("langchain", "test_langchain.py",
      "the LangChain tool re-decides instead of replaying", False),
 ]
