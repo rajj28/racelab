@@ -56,7 +56,18 @@ except ImportError:
     pass
 
 FUNCTION = "racelab-gateway"
-ROLE = "racelab-gateway-role"
+# Region-suffixed, because IAM is global and the policy attached to it is not.
+# Deploying to a second region called put_role_policy on the SAME role with an
+# ARN scoped to the new region, which silently revoked the first region's access
+# to its own secret. The first function then failed every request with a 500 and
+# a fast billed duration -- fast enough that a latency benchmark read it as an
+# improvement. A shared role across regions is a trap; one role per region is
+# both correct and least-privilege.
+def role_name(region: str) -> str:
+    return f"racelab-gateway-role-{region}"
+
+
+ROLE_LEGACY = "racelab-gateway-role"
 SECRET = "racelab/crdb-dsn"
 ALARM = "racelab-hard-limit-violation"
 NAMESPACE = "RaceLab"
@@ -205,10 +216,12 @@ def deploy(region: str, concurrency: int, layer: str | None) -> int:
         print(f"updated secret {SECRET}")
 
     # -- role ------------------------------------------------------------
+    ROLE = role_name(region)
     try:
         role = c["iam"].create_role(
             RoleName=ROLE, AssumeRolePolicyDocument=json.dumps(TRUST),
-            Description="Least-privilege execution role for the RaceLab gateway")
+            Description=f"Least-privilege execution role for the RaceLab gateway "
+                        f"in {region}")
         role_arn = role["Role"]["Arn"]
         print(f"created role {ROLE}")
         time.sleep(10)  # IAM propagation, before Lambda will accept the role
@@ -220,7 +233,7 @@ def deploy(region: str, concurrency: int, layer: str | None) -> int:
 
     c["iam"].put_role_policy(RoleName=ROLE, PolicyName="racelab-gateway-inline",
                              PolicyDocument=json.dumps(inline_policy(account, region)))
-    print("attached least-privilege inline policy")
+    print(f"attached least-privilege inline policy scoped to {region}")
 
     # -- function --------------------------------------------------------
     package = build_package()
@@ -341,8 +354,8 @@ def destroy(region: str) -> int:
         ("function", lambda: c["lambda"].delete_function(FunctionName=FUNCTION)),
         ("alarm", lambda: c["cw"].delete_alarms(AlarmNames=[ALARM])),
         ("inline policy", lambda: c["iam"].delete_role_policy(
-            RoleName=ROLE, PolicyName="racelab-gateway-inline")),
-        ("role", lambda: c["iam"].delete_role(RoleName=ROLE)),
+            RoleName=role_name(region), PolicyName="racelab-gateway-inline")),
+        ("role", lambda: c["iam"].delete_role(RoleName=role_name(region))),
         ("secret", lambda: c["sm"].delete_secret(
             SecretId=SECRET, ForceDeleteWithoutRecovery=True)),
     ]:

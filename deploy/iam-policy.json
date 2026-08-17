@@ -15,7 +15,7 @@
         "iam:ListRoles",
         "iam:PassRole"
       ],
-      "Resource": "arn:aws:iam::*:role/racelab-gateway-role"
+      "Resource": "arn:aws:iam::*:role/racelab-gateway-role*"
     },
     {
       "Sid": "ManageTheGatewayFunction",
@@ -41,7 +41,10 @@
     {
       "Sid": "ListFunctionsForPreflightCheck",
       "Effect": "Allow",
-      "Action": ["lambda:ListFunctions", "lambda:ListLayers"],
+      "Action": [
+        "lambda:ListFunctions",
+        "lambda:ListLayers"
+      ],
       "Resource": "*"
     },
     {
@@ -60,7 +63,9 @@
     {
       "Sid": "ListSecretsForPreflightCheck",
       "Effect": "Allow",
-      "Action": ["secretsmanager:ListSecrets"],
+      "Action": [
+        "secretsmanager:ListSecrets"
+      ],
       "Resource": "*"
     },
     {
@@ -78,9 +83,15 @@
     {
       "Sid": "PublishOurOwnMetrics",
       "Effect": "Allow",
-      "Action": ["cloudwatch:PutMetricData"],
+      "Action": [
+        "cloudwatch:PutMetricData"
+      ],
       "Resource": "*",
-      "Condition": { "StringEquals": { "cloudwatch:namespace": "RaceLab" } }
+      "Condition": {
+        "StringEquals": {
+          "cloudwatch:namespace": "RaceLab"
+        }
+      }
     },
     {
       "Sid": "ReadTheGatewayLogs",

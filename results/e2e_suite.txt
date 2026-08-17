@@ -1,0 +1,386 @@
+
+==============================================================================
+schema: a clean clone gets a vector index the optimizer actually uses
+==============================================================================
+Clean-clone schema verification
+==================================================================
+
+Creating a throwaway database: racelab_cleanroom
+
+1. Applying the schema exactly as `make schema` does
+  applied
+
+2. The applied schema, read back from the cluster
+  PASS  the vector index exists
+  PASS  no ordinary secondary index on (account_id)
+  PASS  account_id is the vector index prefix column
+
+3. Loading 400 rows and asking the optimizer, unaided
+  PASS  the optimizer chooses vector search with no index hint
+        | ? table: memories@memories_pkey
+        | ??? ? vector search
+        | table: memories@memories_embedding_idx
+
+Dropping racelab_cleanroom
+
+==================================================================
+A fresh clone gets a schema whose vector index the optimizer actually uses.
+
+==============================================================================
+wrapper: the arms differ by exactly one flag, and the collapse guard fires
+==============================================================================
+RaceLab wrapper tests
+======================================================================
+
+1. The arms differ in one flag and nothing else
+  [PASS] naive() selects the naive policy
+  [PASS] conflict_aware() selects the conflict-aware policy
+  [PASS] both arms reason identically on attempt 0 -- the first decision comes from the same function, so only the response to a conflict differs
+  [PASS] exactly one attribute differs -- differing: ['re_reason']
+
+3. `revised` requires a conflict AND a changed action
+  [PASS] no conflict, same action -> not revised
+  [PASS] no conflict is never a revision -- a changed action without a conflict would mean something else went wrong
+  [PASS] conflict, same action -> retry, not revision
+  [PASS] conflict, changed action -> revised
+
+2. Configurations that would invalidate a result are refused
+  [PASS] non-autocommit connection rejected
+  [PASS] telemetry on a non-autocommit connection rejected -- telemetry must not be rolled back by the conflict it records
+
+4. Forced conflict on CockroachDB (SERIALIZABLE)
+     agent-1 reads 20, waits; agent-2 commits 45; agent-1 then writes
+     naive           conflicts=1 reason_calls=1 before=allocate(45) after=allocate(45) revised=False outcome=committed final_sum=110
+     conflict-aware  conflicts=1 reason_calls=2 before=allocate(45) after=allocate(35) revised=True outcome=committed final_sum=100
+  [PASS] naive conflicted
+  [PASS] conflict-aware conflicted -- both arms must hit the same database behaviour
+  [PASS] naive reasoned exactly once -- it replayed the action computed against the stale read of 20
+  [PASS] conflict-aware reasoned again after the conflict -- 2 calls, 1 conflicts
+  [PASS] naive did not revise -- allocate(45) -> allocate(45)
+  [PASS] conflict-aware revised -- allocate(45) -> allocate(35), after re-reading 65
+  [PASS] naive violated the invariant -- final sum 110 > hard limit 100, committed with no error
+  [PASS] conflict-aware held the invariant -- final sum 100 <= hard limit 100
+  [PASS] telemetry recorded one decision row per reasoning step -- 2 rows, 2 calls
+  [PASS] telemetry recorded the conflict attempts
+
+5. The arm-collapse guard
+  [PASS] real runs pass the cross-arm guard -- naive reasoned 1x, conflict-aware 2x
+  [PASS] guard rejects a collapsed naive arm
+  [PASS] the collapsed run looks correct by every outcome metric -- committed, revised, plausible action -- which is why outcome assertions cannot catch this
+
+======================================================================
+23/23 passed
+
+The wrapper's contract holds. This says nothing yet about whether the
+scenario is realistic or the model reasons well -- only that naive and
+conflict-aware differ where they are supposed to and nowhere else.
+
+==============================================================================
+memory: retrieval is index-backed, causal, and prefers current policy
+==============================================================================
+embedding provider: titan-v2
+
+1. Retrieval is index-backed
+  PASS  query plan contains a vector search node
+        | ? table: memories@memories_pkey
+        | ??? • vector search
+        | table: memories@memories_embedding_idx
+  PASS  no secondary index on (account_id) competing with the vector index
+
+2. The two corpus states infer different ceilings
+
+  [before update] retrieved 4 memories, ranked:
+      hero-m1          kind=policy   dist=0.4032 score=0.5968 <- policy in force
+                       Temporary authorization ceiling for this account is $80 per billing cycle, pending compl
+      hero-m2          kind=history  dist=0.6520 score=0.3980
+                       Historical allocations against this account averaged $45 per request during the previous
+      hero-m3          kind=note     dist=0.7992 score=0.3008
+                       The primary contact for this account is the procurement team, who prefer approvals to be
+      hero-m4          kind=note     dist=0.8937 score=0.2563
+                       This account was migrated from the legacy billing system in March and its historical rec
+  [before update] inferred ceiling: 80
+
+  [after update] retrieved 4 memories, ranked:
+      hero-m5          kind=policy   dist=0.5806 score=0.5694 <- policy in force
+                       Authorization ceiling reduced to $60 per billing cycle, effective immediately, supersedi
+      hero-m2          kind=history  dist=0.6520 score=0.3480
+                       Historical allocations against this account averaged $45 per request during the previous
+      hero-m3          kind=note     dist=0.7992 score=0.2010
+                       The primary contact for this account is the procurement team, who prefer approvals to be
+      hero-m4          kind=note     dist=0.8937 score=0.1067
+                       This account was migrated from the legacy billing system in March and its historical rec
+  [after update] inferred ceiling: 60
+  PASS  ceiling before update is 80
+  PASS  ceiling after update is 60
+  PASS  the superseding memory changed the inferred ceiling
+
+3. The changed ceiling changes the proposed action
+
+  observed_sum | ceiling 80 | ceiling 60 | diverges
+  ------------------------------------------------------------
+             0 |  allocate(45) |  allocate(45) |   -
+            35 |  allocate(45) |       abstain | YES
+            40 |  allocate(40) |       abstain | YES
+            45 |  allocate(35) |       abstain | YES
+            60 |       abstain |       abstain |   -
+            80 |       abstain |       abstain |   -
+  PASS  at least one observed sum produces a different action
+
+  3 of 6 probed states diverge
+
+4. Each experiment account infers its own regime's ceiling
+  PASS  exp-standard         infers $90
+  PASS  exp-restricted       infers $60
+  PASS  exp-unrestricted     infers $100
+  PASS  exp-tight            infers $45
+  PASS  exp-moderate         infers $75
+  PASS  exp-overpermissive   infers $120
+  PASS  a $120 policy ceiling does not authorize exceeding a $100 hard limit
+
+==================================================================
+All checks passed.
+
+==============================================================================
+arms: four arms, and the ablation decomposed
+==============================================================================
+RaceLab four-arm verification
+==============================================================================
+
+Hero account hero-001, hard limit $100.
+Policy ceiling is $80 and drops to $60 while agent-1 is mid-decision.
+agent-2 commits $45 in the window, forcing agent-1's transaction to conflict.
+
+------------------------------------------------------------------------------
+Configuration: $0 pre-allocated
+  agent-1 re-reads $45: $80 ceiling permits 35, $60 ceiling does not
+
+  A · postgres RC · naive                      conflicts=0 reason_calls=1 refreshes=0 allocate(45) -> allocate(45) sum=90 limit:held policy:BREACHED
+  A-rc · cockroach RC · naive                  conflicts=1 reason_calls=1 refreshes=0 allocate(45) -> allocate(45) sum=90 limit:held policy:BREACHED
+  B · cockroach · naive                        conflicts=1 reason_calls=1 refreshes=0 allocate(45) -> allocate(45) sum=90 limit:held policy:BREACHED
+  C-ops · cockroach · re-reason, stale memory  conflicts=1 reason_calls=2 refreshes=0 allocate(45) -> allocate(35) sum=80 limit:held policy:BREACHED
+  C · cockroach · full refresh                 conflicts=1 reason_calls=2 refreshes=1 allocate(45) -> abstain sum=45 limit:held policy:held
+
+  Decomposition (change in final sum; negative is an improvement)
+    isolation_surfaces_conflict                  +0
+    isolation_surfaces_conflict_same_vendor      +0
+    re_reasoning_over_fresh_operational_state    -10
+    refreshing_semantic_memory                   -35
+
+------------------------------------------------------------------------------
+Configuration: $20 pre-allocated
+  agent-1 re-reads $65: both ceilings refuse, refresh cannot matter
+
+  A · postgres RC · naive                      conflicts=0 reason_calls=1 refreshes=0 allocate(45) -> allocate(45) sum=110 limit:VIOLATED policy:BREACHED
+  A-rc · cockroach RC · naive                  conflicts=1 reason_calls=1 refreshes=0 allocate(45) -> allocate(45) sum=110 limit:VIOLATED policy:BREACHED
+  B · cockroach · naive                        conflicts=1 reason_calls=1 refreshes=0 allocate(45) -> allocate(45) sum=110 limit:VIOLATED policy:BREACHED
+  C-ops · cockroach · re-reason, stale memory  conflicts=1 reason_calls=2 refreshes=0 allocate(45) -> abstain sum=65 limit:held policy:BREACHED
+  C · cockroach · full refresh                 conflicts=1 reason_calls=2 refreshes=1 allocate(45) -> abstain sum=65 limit:held policy:BREACHED
+
+  Decomposition (change in final sum; negative is an improvement)
+    isolation_surfaces_conflict                  +0
+    isolation_surfaces_conflict_same_vendor      +0
+    re_reasoning_over_fresh_operational_state    -45
+    refreshing_semantic_memory                   +0
+
+==============================================================================
+Mechanism instrumentation (both configurations)
+  [PASS] [$0 pre-allocated] B reasoned exactly once
+  [PASS] [$0 pre-allocated] C-ops re-reasoned on conflict
+  [PASS] [$0 pre-allocated] C-ops never refreshed memory -- this is the entire definition of the ablation
+  [PASS] [$0 pre-allocated] C refreshed memory once per conflict
+  [PASS] [$20 pre-allocated] B reasoned exactly once
+  [PASS] [$20 pre-allocated] C-ops re-reasoned on conflict
+  [PASS] [$20 pre-allocated] C-ops never refreshed memory -- this is the entire definition of the ablation
+  [PASS] [$20 pre-allocated] C refreshed memory once per conflict
+  [PASS] C-ops and C differ in exactly one setting
+
+What the ablation says
+  hard limit $100; policy ceiling after the update $60
+
+  $  0 pre-allocated:
+    C-ops sum= 80  limit     held  policy BREACHED
+    C     sum= 45  limit     held  policy     held
+    -> memory refresh changed the outcome
+  $ 20 pre-allocated:
+    C-ops sum= 65  limit     held  policy BREACHED
+    C     sum= 65  limit     held  policy BREACHED
+    -> memory refresh made no difference
+
+  The two configurations disagree, and that is the finding. Whether
+  refreshing semantic memory matters depends on where the re-read lands
+  relative to the old and new ceilings. Where both ceilings refuse the
+  reading, the operational re-read alone carries the whole effect. Where
+  they disagree, the agent reasoning over stale memory stays inside the
+  hard limit and allocates past the policy ceiling that replaced it --
+  a breach the invariant column alone would report as a success.
+
+==============================================================================
+9/9 checks passed
+
+==============================================================================
+guardrail: a constraint checked before commit is enforced, not merely observed
+==============================================================================
+The guardrail: a constraint enforced inside the transaction
+============================================================================
+  seeded $20 already allocated; ceiling $60; hard limit $100
+  the agent picks the largest of (45, 40, 35) that fits the HARD LIMIT,
+  so it wants allocate(45) -> $65, which breaks the $60 ceiling
+
+1. Without a guardrail, the violating state commits
+     outcome=committed action=allocate(45) total=$65 refusals=0
+  [PASS] it committed
+  [PASS] the ceiling was breached -- $65 > $60
+  [PASS] nothing recorded a refusal
+
+2. Naive + guardrail: refuses to commit, writes nothing
+     outcome=refused action=None total=$20 refusals=4 refused=['allocate(45)', 'allocate(45)', 'allocate(45)', 'allocate(45)']
+  [PASS] the outcome is 'refused' -- refused
+  [PASS] nothing was written -- total $20
+  [PASS] the ceiling held
+  [PASS] refusals were bounded -- 4 (max_refusals=3, +1)
+  [PASS] naive still reasoned exactly once -- 1 call(s) -- it replays, so feedback cannot help it
+
+3. Conflict-aware + guardrail: re-decides and commits a legal state
+     outcome=committed action=allocate(40) total=$60 refusals=1 refused=['allocate(45)']
+  [PASS] it committed -- committed
+  [PASS] the ceiling held -- $60 <= $60
+  [PASS] it was refused at least once first -- 1
+  [PASS] the committed action is not one that was refused -- allocate(40) not in ['allocate(45)']
+  [PASS] it reasoned more than once -- 2 calls
+
+4. An agent that ignores the feedback cannot force a violation through
+     outcome=refused action=None total=$20 refusals=4
+  [PASS] the outcome is 'refused' -- refused
+  [PASS] the ceiling still held -- $20
+  [PASS] this is the guarantee: bad reasoning cannot commit a violating state
+
+============================================================================
+16/16 passed
+
+The constraint is a guarantee, not a measurement. Re-reasoning buys
+throughput -- 'committed' instead of 'refused'. It does not buy safety,
+because the guardrail already had that covered.
+
+==============================================================================
+action-space: the finding survives random action spaces, so $80.00 was one instance
+==============================================================================
+Does the result depend on the action space?
+========================================================================================
+  stale ceiling $80, current ceiling $60, hard limit $100
+  window 1000ms, 20 agents, 2 runs per cell
+  baseline options (45, 40, 35) make 45+35 = $80 exactly; these do not
+
+           options       C-ops sums           C sums   verdict
+      (37, 36, 24)         [74, 74]         [37, 37]   [PASS]
+      (50, 26, 23)         [76, 76]         [76, 50]   [PASS]
+      (27, 20, 17)         [74, 74]         [54, 54]   [PASS]
+      (45, 36, 28)         [73, 73]         [73, 73]   [PASS]
+      (51, 46, 17)         [68, 68]         [68, 68]   [PASS]
+      (43, 38, 24)         [67, 67]         [67, 43]   [PASS]
+      (51, 49, 25)         [76, 76]         [51, 51]   [PASS]
+
+========================================================================================
+C-ops final sums observed: [67, 68, 73, 74, 76]
+  distinct values: 5  (if this is 1, the number really is an artifact of one action space)
+  spread: min 67, max 76, stdev 3.4
+C final sums observed:     [37, 43, 50, 51, 54, 67, 68, 73, 76]
+
+Policy-ceiling breaches (total > $60):
+  C-ops 14/14    C 6/14
+
+The mechanism holds across every action space drawn:
+  * C-ops fills to the ceiling it REMEMBERS ($80) and so breaches
+    the one in force ($60) -- at a different total each time.
+  * C never exceeds the highest ceiling ever in force, and is never
+    worse than C-ops on a matched run.
+  * C breaches the $60 ceiling far less often, but not never --
+    a commit made legally before the policy moved cannot be revoked.
+  * Neither ever breaks the hard limit of $100.
+
+So $80.00 was one instance, not the result. The result is the
+mechanism, and the number it lands on depends on the action space.
+
+==============================================================================
+seats: a second scenario: counts, and a categorical correction
+==============================================================================
+Second scenario: license seats, counts and a categorical choice
+================================================================================
+  org seat cap 12 (a column)   premium cap 5 -> 2 (retrieved text only)
+  20 agents, 1000ms arrival window
+  a fresh agent must grant a DIFFERENT TIER, not a smaller number
+
+1. Retrieval surfaces the superseding policy at all
+  [PASS] stale corpus yields the old cap -- inferred 5
+  [PASS] fresh corpus yields the new cap -- inferred 2
+
+2. Naive: replays its grant
+     seats=9 premium=9 conflicts=75 revised=0
+
+3. C-ops: re-reasons over fresh counts, stale policy
+     seats=8 premium=3 conflicts=76 revised=9
+
+4. C: re-reasons over fresh counts AND fresh policy
+     seats=12 premium=2 conflicts=36 revised=9
+
+5. The same pattern as the allocation scenario
+  [PASS] naive over-granted premium seats -- 9 > 2
+  [PASS] C-ops still over-granted premium, reasoning over stale policy -- 3 premium, stale cap was 5
+  [PASS] C-ops stayed within the cap it REMEMBERED -- 3 <= 5
+  [PASS] C respected the refreshed policy -- 2 <= 2
+  [PASS] C switched tier rather than granting fewer seats -- 12 seats of which 2 premium
+  [PASS] no arm exceeded the structural seat cap -- 9, 8, 12 <= 12
+
+6. The guardrail also generalises
+     seats=9 premium=2 refused=0
+  [PASS] the seat cap held with a constraint supplied -- 9 <= 12
+
+================================================================================
+9/9 passed
+
+Different domain, counts instead of sums, and a categorical correction
+rather than a numeric clamp -- and the same three-way split appears.
+The finding is about stale retrieved context, not about arithmetic.
+
+==============================================================================
+langchain: the LangChain tool re-decides instead of replaying
+==============================================================================
+LangChain conflict-aware tool, against a live CockroachDB cluster
+==========================================================================
+  seeded 20; agent 1 reads 20 and waits; another writer commits 45
+  -> a stale decision of allocate(45) would take the total to 110
+
+1. The tool is a real LangChain tool
+  [PASS] subclasses BaseTool
+  [PASS] exposes name and description
+
+2. Forced conflict, reasoning step invoked through LangChain
+  [PASS] the tool returned a result
+     allocate(35) after 1 serialization failure(s); decision changed (allocate(45) -> allocate(35)); reasoned 2 time(s)
+     final total $100, hard limit $100
+  [PASS] a serialization failure actually occurred -- 1 conflict(s)
+  [PASS] the reasoning step ran more than once -- 2 invocations of the Runnable
+  [PASS] reason_calls matches attempts -- 2 calls over 2 attempts
+  [PASS] the decision was revised -- allocate(45) -> allocate(35)
+  [PASS] the invariant held -- $100 <= $100
+  [PASS] describe() reports the reconsideration to the model
+
+==========================================================================
+9/9 passed
+
+The tool re-invoked the LangChain reasoning step against fresh state
+and committed a different, correct decision. Standard framework retry
+would have replayed the first tool call with its original arguments.
+
+==============================================================================
+Summary
+==============================================================================
+  PASS  schema       80.6s
+  PASS  wrapper       8.4s
+  PASS  memory        8.9s
+  PASS  arms         51.2s
+  PASS  guardrail    12.8s
+  PASS  action-space  261.3s
+  PASS  seats       129.1s
+  PASS  langchain    13.7s
+
+All 8 suites passed.

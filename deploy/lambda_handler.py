@@ -52,14 +52,20 @@ handler respects the connection budget and says so below.
     CloudWatch        four counters, of which ConstraintRefusals is the one to
                       alert on
 
-## Deliberate limitation
+## Connections, and why there is no pool
 
-One connection per invocation, opened and closed per request, and no pool. Lambda
-concurrency is unbounded by default while a CockroachDB Basic cluster is not, so
-a pool inside a container that AWS may replicate a thousand times is a way to
-exhaust the cluster. Reserved concurrency is the control that belongs here, and
-`deploy/deploy.py` sets it explicitly rather than leaving it at the account
-default.
+One connection per *container*, held across warm invocations, and never a pool.
+
+Opening one per request cost ~580 ms of TLS handshake and was the largest single
+term in a 3.5 s response. Holding it removes that from every warm request.
+
+A pool would be worse than useless: Lambda gives each container exactly one
+concurrent request, so a pool inside one is never used, while a pool multiplied
+by AWS's concurrency is precisely how a cluster's connection budget is exhausted.
+The concurrency ceiling is set separately in `deploy/deploy.py`.
+
+The held connection is checked before use and dropped on any operational error,
+because a container can outlive the connection it opened.
 """
 
 from __future__ import annotations
@@ -67,7 +73,9 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import sys
+import time
 import uuid
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
@@ -88,6 +96,16 @@ OPTIONS = (45, 40, 35)
 _DSN: str | None = None
 _DSN_SOURCE: str | None = None
 
+# The connection is also held across warm invocations. Measured: the TLS
+# handshake to CockroachDB Cloud costs ~580 ms, and opening one per request made
+# it the single largest term in a 3.5 s response.
+#
+# One connection per container, never a pool. Lambda gives each container exactly
+# one concurrent request, so a pool inside one buys nothing, and a pool
+# multiplied by AWS's concurrency is how a cluster's connection budget is
+# exhausted. Concurrency is capped separately (deploy/deploy.py).
+_CONN = None
+
 
 def _dsn() -> str:
     global _DSN, _DSN_SOURCE
@@ -97,6 +115,26 @@ def _dsn() -> str:
         log_event("dsn_resolved", source=resolved.source,
                   managed=resolved.is_managed)
     return _DSN
+
+
+def _connection():
+    """A live connection, reused across warm invocations of this container.
+
+    A held connection can be closed by the server between invocations -- idle
+    timeouts, a cluster upgrade, a network blip -- so it is checked before use
+    rather than assumed. `closed` is cheap and local; the round trip only
+    happens when reconnecting.
+    """
+    global _CONN
+    if _CONN is not None and not _CONN.closed:
+        return _CONN
+    if _CONN is not None:
+        log_event("connection_recycled", reason="server closed it")
+    t0 = time.perf_counter()
+    _CONN = psycopg.connect(_dsn(), autocommit=True, connect_timeout=10)
+    log_event("connection_opened",
+              ms=round((time.perf_counter() - t0) * 1000, 1))
+    return _CONN
 
 
 class Decision:
@@ -117,6 +155,49 @@ def _read_total(account_id: str):
             (account_id,))
         return int(cur.fetchone()[0])
     return read
+
+
+# One statement instead of two. The total and the policy that constrains it were
+# separate round trips, and at ~91 ms each that is measurable. Combining them
+# also *strengthens* the correctness argument rather than trading against it:
+# both values now provably come from the same read timestamp, where before they
+# merely happened to.
+_READ_STATE = """
+WITH total AS (
+    SELECT COALESCE(SUM(amount), 0) AS t
+    FROM allocations WHERE account_id = %(acct)s
+), pol AS (
+    -- The ORDER BY is inside the aggregate deliberately. An ORDER BY in the
+    -- subquery does not guarantee the order `array_agg` collects in, and the
+    -- newest policy must be first: the whole scenario turns on a superseding
+    -- policy winning over the one it replaced. It happened to come out right
+    -- in testing, which is exactly how this kind of bug survives to production.
+    SELECT array_agg(memory_id ORDER BY created_at DESC) AS ids,
+           array_agg(text ORDER BY created_at DESC) AS texts
+    FROM (
+        SELECT memory_id, text, created_at FROM memories
+        WHERE account_id = %(acct)s AND kind = 'policy'
+        ORDER BY created_at DESC LIMIT 4
+    ) s
+)
+SELECT total.t, pol.ids, pol.texts FROM total, pol
+"""
+
+
+def _read_state(cur, account_id: str) -> tuple[int, int | None, list[str]]:
+    """Read the running total and the governing policy in one round trip."""
+    cur.execute(_READ_STATE, {"acct": account_id})
+    row = cur.fetchone()
+    total = int(row[0] or 0)
+    ids = list(row[1] or [])
+    texts = list(row[2] or [])
+    ceiling = None
+    for text in texts:
+        found = re.search(r"\$\s*(\d+)", text or "")
+        if found:
+            ceiling = int(found.group(1))
+            break
+    return total, ceiling, ids
 
 
 def _infer_ceiling(cur, account_id: str) -> tuple[int | None, list[str]]:
@@ -178,13 +259,15 @@ def handler(event, context):  # noqa: ANN001 - AWS signature
         return decision
 
     def operational_read(cur) -> int:
-        # Both reads happen inside the transaction, and that is the whole design:
-        # the policy this write is checked against is read at the same timestamp
-        # as the total it is checked over. Reading the policy outside would let
-        # it move between the check and the commit.
-        ceiling, ids = _infer_ceiling(cur, account_id)
+        # Both reads happen inside the transaction, and in ONE statement. That is
+        # the whole design: the policy this write is checked against is read at
+        # the same timestamp as the total it is checked over. Reading the policy
+        # outside the transaction would let it move between the check and the
+        # commit; reading it in a second statement merely made them *likely* to
+        # match. One statement makes it provable, and costs one round trip fewer.
+        total, ceiling, ids = _read_state(cur, account_id)
         ceiling_seen["value"], ceiling_seen["ids"] = ceiling, ids
-        return _read_total(account_id)(cur)
+        return total
 
     def apply(cur, proposal) -> bool:
         if proposal.amount is None:
@@ -205,9 +288,8 @@ def handler(event, context):  # noqa: ANN001 - AWS signature
             return f"total would be ${total}, over the ${ceiling} policy ceiling"
         return None
 
-    conn = None
     try:
-        conn = psycopg.connect(_dsn(), autocommit=True, connect_timeout=10)
+        conn = _connection()
         wrapper = ConflictAware(
             operational_read=operational_read,
             apply=apply,
@@ -219,18 +301,16 @@ def handler(event, context):  # noqa: ANN001 - AWS signature
         )
         result = wrapper.run(conn, agent_id=agent_id, run_id=run_id)
     except psycopg.OperationalError as exc:
+        # A held connection that died mid-request is dropped so the next
+        # invocation reconnects rather than inheriting a broken one.
+        global _CONN
+        _CONN = None
         log_event("database_unreachable", error=str(exc)[:300], level="ERROR")
         return _reply(503, {"error": "memory layer unreachable",
                             "detail": str(exc)[:200]})
     except Exception as exc:  # noqa: BLE001
         log_event("unhandled", error=f"{type(exc).__name__}: {exc}", level="ERROR")
         return _reply(500, {"error": "internal error"})
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:  # noqa: BLE001
-                pass
 
     publish_metrics(metrics_from_result(result), arm="gateway")
 
