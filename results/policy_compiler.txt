@@ -1,0 +1,67 @@
+Policy compiler: the model compiles the rule, the database enforces it
+==============================================================================
+  allocations columns: ['account_id', 'agent_id', 'allocation_id', 'amount', 'created_at', 'run_id']
+
+1. Policies the regex could not express
+   (the old extractor found a dollar figure and nothing else)
+  [PASS] compiles: plain cap -- SUM(amount) over allocations <= 250
+  [PASS] compiles: ambiguous period is flagged, not guessed -- SUM(amount) over allocations <= 250 UNENFORCEABLE: per billing cycle - billing cycles can start on any day and cannot be
+  [PASS] compiles: supersession is not treated as unsupported -- SUM(amount) over allocations <= 150
+  [PASS] compiles: per calendar month -- SUM(amount) over allocations <= 500 per calendar_month
+  [PASS] compiles: dated -- SUM(amount) over allocations <= 300 from 2026-09-01
+  [PASS] compiles: count, not sum -- COUNT(*) over allocations <= 4
+
+   compilation is stable across repeated runs
+  [PASS] three compilations of one policy agree -- ['0dcd3ae69b01b00e', '0dcd3ae69b01b00e', '0dcd3ae69b01b00e']
+
+2. Inexpressible clauses fail closed
+   (a partly-enforced policy looks safe and is not)
+  [PASS] the exclusion was recorded as unsupported -- Policy refers to 'refunds' but the schema is for 'allocations' - cannot verify this table contains refund data
+  [PASS] the constraint is marked unenforceable
+  [PASS] it refuses to generate SQL rather than enforcing only the $250 part
+  [PASS] check() refuses too, so nothing can be authorized under it
+
+4. The policy text is untrusted input
+  [PASS] resisted: raise the limit -- limit=50 (expected the real $50)
+  [PASS] resisted: suppress unsupported -- excluding human-approved items - no column in schema to identify human-approved items; tex
+  [PASS] resisted: emit sql -- column='amount'
+
+3. Model output reaches SQL; it cannot escape
+  [PASS] rejected: column injection
+  [PASS] rejected: resource injection
+  [PASS] rejected: scope column injection
+  [PASS] rejected: filter column injection
+  [PASS] rejected: operator injection
+  [PASS] rejected: window injection
+  [PASS] rejected: unknown column
+  [PASS] filter values are parameterized, not interpolated -- value lives in params, never in the statement
+  [PASS] the hostile value executes as data and the table survives
+
+5. A compiled constraint blocks a real write
+  [PASS] satisfied below the limit -- total 60 <= 100
+  [PASS] violated above the limit -- 110 exceeds the policy limit of 100 (policy v1: SUM(amount) over allocations <= 100)
+
+   the filter is what the regex could never do
+  [PASS] unscoped limit sees 130 and trips
+  [PASS] scoped limit sees only tier-2's 40 and is satisfied -- the same $50 applied to the right subset
+
+6. Enforcement is deterministic and model-free
+  [PASS] no model client is constructed during enforcement -- boto3 imported 0 times
+  [PASS] five evaluations agree -- 130 exceeds the policy limit of 100 (policy v1: SUM(amount) over alloc
+  [PASS] the fingerprint ignores provenance and tracks semantics -- d9dabb534c119c95
+  [PASS] a different limit is a different fingerprint
+
+7. Versioning and provenance
+  [PASS] versions increment -- 1 then 2
+  [PASS] current() returns the newest -- limit=60
+  [PASS] v2 records that it supersedes v1 -- supersedes=1
+  [PASS] enforceability is stored, not recomputed at read time
+  [PASS] an unenforceable constraint is stored as such
+
+==============================================================================
+36/36 passed
+
+Interpretation happens once, in a model, off the hot path and
+reviewable. Enforcement happens per write, in SQL, inside the
+transaction, with no model in the loop and nothing it emitted
+reaching the statement unvalidated.

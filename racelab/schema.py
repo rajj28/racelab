@@ -144,6 +144,27 @@ TELEMETRY = [
 ]
 
 # CockroachDB only.
+# Compiled policy constraints. CockroachDB only, alongside `memories`: a compiled
+# constraint IS a memory -- versioned, superseding, and the thing an agent is
+# actually held to. See racelab/policy.py.
+POLICY = [
+    """
+    CREATE TABLE IF NOT EXISTS policy_constraints (
+        constraint_id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        account_id      TEXT NOT NULL,
+        version         INT  NOT NULL,
+        fingerprint     TEXT NOT NULL,
+        enforceable     BOOL NOT NULL,
+        compiled        JSONB NOT NULL,
+        source_memory_id TEXT,
+        supersedes      INT,
+        compiled_by     TEXT,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (account_id, version)
+    )
+    """,
+]
+
 MEMORIES = [
     f"""
     CREATE TABLE IF NOT EXISTS memories (
@@ -325,6 +346,7 @@ MCP_VIEWS = [
 ]
 
 DROP_ORDER = [
+    "policy_constraints",
     "conflict_edges",
     "agent_attempts",
     "decisions",
@@ -352,7 +374,7 @@ def create_all(conn: psycopg.Connection, *, verbose: bool = True) -> None:
     dialect = dialect_of(conn)
     steps = list(OPERATIONAL) + list(TELEMETRY)
     if dialect is Dialect.COCKROACH:
-        steps += list(MEMORIES)
+        steps += list(MEMORIES) + list(POLICY)
 
     for stmt in steps:
         conn.execute(stmt)
