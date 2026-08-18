@@ -80,7 +80,7 @@ $8,750 · 1st $5,000 + blog feature · 2nd $2,500 · 3rd $1,250
 | Distributed Vector Indexing | ✅ deeply used | `VECTOR(1024)` + `CREATE VECTOR INDEX … vector_cosine_ops`; found & fixed a cost-model bug where a redundant `(account_id)` index beat the vector index |
 | ccloud CLI | ✅ used | `racelab/integrations/ccloud.py` — control-plane preflight before launching a swarm; read-only by allowlist |
 | Managed MCP Server | ✅ **connected & queried** | `scripts/mcp_query.py` — real session, `cockroachdb-cloud 1.0.0`, protocol `2025-06-18`, 12 tools |
-| Agent Skills Repo | ⚠️ **authored, NOT submitted** | `contrib/cockroachdb-skills/` — 0 errors against their validator; **no fork, no issue, no PR** |
+| Agent Skills Repo | ✅ **SUBMITTED 2026-08-18** | proposal [issue #25](https://github.com/cockroachlabs/cockroachdb-skills/issues/25) → [PR #26](https://github.com/cockroachlabs/cockroachdb-skills/pull/26), branch `add-skill/application-development/retrying-agent-decisions-under-contention`. 0 errors against their validator; 1 warning that is a false positive (the gerund heuristic reads the *trailing* word, and fires on several already-merged skills) |
 
 We also **provide** an MCP server (`racelab/integrations/mcp_server.py`), so the
 project is both an MCP client and an MCP server.
@@ -393,11 +393,15 @@ including the three findings they produced. What follows is the remaining work.*
 
 ### Awaiting the user
 
-- **Video** — script ready in `docs/VIDEO.md`.
-- **Upstream PR** to `cockroachlabs/cockroachdb-skills` — skill validated at 0
-  errors in `contrib/`. Needs: proposal issue → fork → branch
-  `add-skill/cockroachdb-application-development/retrying-agent-decisions-under-contention`
-  → validate → PR. **Not started; it is the one irreversible outward action.**
+- **Video** — script ready in `docs/VIDEO.md`, runbook in `docs/DEMO.md`. **The
+  last hard requirement still outstanding.**
+- ~~**Upstream PR** to `cockroachlabs/cockroachdb-skills`~~ **DONE 2026-08-18.**
+  Issue #25 → PR #26. Working clone at `~/work/cockroachdb-skills` with
+  `upstream` remote configured. Note the branch convention is
+  `add-skill/<domain-without-prefix>/<skill>` — *not* the
+  `cockroachdb-`-prefixed form previously written here; the directory keeps the
+  prefix, the branch does not. **Watch for review comments; push new commits
+  rather than force-pushing, per their guide.**
 - Delete the two orphaned IAM roles.
 
 ---
@@ -666,6 +670,37 @@ PostgreSQL at default isolation? yes — and it is excluded from the comparison
 Consequence to state rather than hide: arm A is nearly absent from the
 CockroachDB-side MCP views, because each run's telemetry goes to the backend
 that ran it.
+
+### Deployment — the live function now matches the repo (2026-08-18)
+
+`racelab-gateway` in `ap-south-1` was **redeployed** and is running the compiled
+-policy code. It had been stale: last modified `2026-08-17 20:18`, 24,390 bytes,
+i.e. the regex path, while the README advertised the URL and the repo described
+the gate.
+
+| | before | after |
+|---|---|---|
+| CodeSize | 24,390 B | **45,018 B** |
+| LastModified | 2026-08-17 20:18 | **2026-08-18 10:22** |
+
+Verified against the deployed function, not locally:
+
+```
+200 committed  allocate(45)  limit=60  policy=compiled v1  dsn=secretsmanager
+403                                     unsigned curl, by design (AWS_IAM)
+200 committed  allocate(250) resource=refunds limit=300 v=1 status=compiled
+200 committed  allocate(50)  resource=refunds limit=300 v=1 status=compiled
+200 abstained  abstain       resource=refunds limit=300 v=1 status=compiled
+```
+
+The last three are the important ones: **the deployed gateway enforced a table
+this repository has no code for**, from `bindings/refunds.yaml` alone.
+`dsn_source: secretsmanager` confirms the credential path.
+
+The build now self-verifies before upload — unzip, path set to the package only,
+`yaml` blocked to mimic the layer, import. Reserved concurrency still cannot be
+set (account limit is 10, stricter than the 8 requested — safe by accident);
+**re-run the deploy after any concurrency increase.**
 
 ### Pre-push hygiene, checked
 
