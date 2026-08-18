@@ -17,31 +17,48 @@ RaceLab — agents that re-decide, instead of retrying
 
 | Name | Chars | Angle |
 |---|---|---|
-| `RaceLab — agents that re-decide, instead of retrying` | 51 | the mechanism |
-| `RaceLab: a write gateway that refused its own policy` | 51 | the surprise |
-| `RaceLab — the $100 budget three agents each spent` | 48 | the problem |
+| `RaceLab — agents that re-decide, instead of retrying` | 52 | the mechanism |
+| `RaceLab — AI agents that think again before they spend` | 54 | **plainer**, if the current one reads too abstract |
+| `RaceLab — stop AI agents from overspending a shared budget` | 58 | plainest; says the outcome outright |
+| `RaceLab: a write gateway that refused its own policy` | 52 | the surprise |
 
 ---
 
 ## 2 · Elevator pitch
 
-*(200 char limit — this is 197)*
+*(200 char limit — this is 189)*
 
 ```
-Serializable isolation tells your agent something changed. It doesn't tell it to think again. RaceLab measures that gap on CockroachDB — 47/50 budget breaches to 0/50 — and enforces it before COMMIT.
+AI agents that share a budget quietly overspend it. RaceLab stops the payment before the money moves and makes the agent decide again with fresh numbers. 47 failures in 50 runs became zero.
 ```
+
+Plain words on purpose. An earlier draft opened with *"Serializable isolation
+tells your agent something changed…"* — accurate, and the wrong register for a
+line a judge reads in two seconds while scrolling a gallery. No jargon survives
+here: no *serializable*, no *COMMIT*, no *isolation level*. The repository
+carries the precise version for anyone who wants it.
+
+It also does not repeat the thumbnail. The gallery card already shows *"Two
+agents checked the budget. Both said yes."* — so the image states the problem
+and the pitch supplies the answer. Together they read as one thought instead of
+saying the same thing twice.
 
 **Backups:**
 
 ```
-AI agents that spend money race each other and the database says nothing. RaceLab makes the write refuse itself: the rule is checked inside the transaction, and 47/50 breaches became 0/50.
+Two AI agents check the same budget. Both say yes. The money goes out twice and the database reports no error. RaceLab makes agents think again instead of retrying: 47 overspends in 50 became 0.
 ```
-*(191 chars)*
+*(194 chars — leads with the problem; use if the thumbnail changes)*
 
 ```
-A policy-enforcing write gateway for AI agents. A model compiles the rule once; CockroachDB enforces it inside the transaction. First thing it did was refuse our own policy as unenforceable.
+A safety layer for AI agents that spend money. It blocks the payment while it can still be stopped, and makes the agent rethink instead of repeat. Overspending went from 47 runs in 50 to none.
 ```
-*(190 chars)*
+*(192 chars — leads with what it is)*
+
+```
+When two AI agents spend from one budget, both approve and the database says nothing is wrong. RaceLab stops the second payment before it lands. In testing, 47 overspends in 50 runs became zero.
+```
+*(194 chars — the money angle)*
 
 ---
 
