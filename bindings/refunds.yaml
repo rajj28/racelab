@@ -1,0 +1,28 @@
+# A resource this repository contains no code for.
+#
+# The point of this file is that there is nothing else: no refund module, no
+# refund SQL, no `if resource == "refunds"` anywhere. The gateway enforces it
+# because it is declared, and `scripts/test_binding.py` proves the invariant
+# holds on it under real contention.
+#
+# Create the tables it needs with:
+#     python scripts/test_binding.py --create
+name: refunds
+description: >
+  A support agent issues refunds against a customer's refund pool. The pool is
+  a column; the refund policy ("tier-2 refunds are capped at $250 pending the
+  Q3 contract review") is a document.
+
+resource: refunds
+scope_column: customer_id
+aggregate: SUM(amount)
+
+hard_limit: customers.refund_pool
+policy_limit: compiled
+
+actions: [50, 100, 250]
+
+id_column: refund_id
+agent_column: agent_id
+run_column: run_id
+timestamp_column: created_at

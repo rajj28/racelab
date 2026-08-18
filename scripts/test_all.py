@@ -7,10 +7,13 @@ suite is runnable with the interpreter that is guaranteed to be there.
 
 The order is deliberate. `verify_clean_clone` runs first and against its own
 throwaway database, so it is the one check that still means something when
-seeding is broken or Bedrock is unavailable.
+seeding is broken or Bedrock is unavailable. `property` runs last because it is
+the slowest and because a failure there is only interpretable once the
+deterministic suites have passed.
 
     python scripts/test_all.py
     python scripts/test_all.py --skip-bedrock   # schema and wrapper only
+    python scripts/test_all.py --only binding
 """
 
 from __future__ import annotations
@@ -42,10 +45,18 @@ SUITE = [
      "a second scenario: counts, and a categorical correction", True),
     ("policy", "test_policy_compiler.py",
      "the model compiles the rule; the database enforces it, safely", True),
+    # Needs Bedrock: it compiles a real policy for a resource this repository
+    # has no code for, which is the whole claim.
+    ("binding", "test_binding.py",
+     "the gateway enforces a table declared in YAML and implemented nowhere", True),
     ("mcp-server", "test_mcp_server.py",
      "any MCP client gets a guarded write and a 'reconsider' result", True),
     ("langchain", "test_langchain.py",
      "the LangChain tool re-decides instead of replaying", False),
+    # Last, and no Bedrock: constraints are constructed rather than compiled, so
+    # the randomized loop tests enforcement without paying for interpretation.
+    ("property", "test_property_concurrency.py",
+     "the guarantee holds under interleavings nobody designed", False),
 ]
 
 

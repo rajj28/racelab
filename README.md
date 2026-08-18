@@ -2,6 +2,15 @@
 
 **A conflict-aware transaction wrapper, and the benchmark that is its evidence.**
 
+| | |
+|---|---|
+| **Live demo** | **<https://rajj28.github.io/racelab/>** — interactive, self-contained, works offline |
+| **Deployed gateway** | `https://3fbyij2xhlcb2cyjwlusfd6fza0bymsg.lambda-url.ap-south-1.on.aws/` — `AWS_IAM` auth, so an unsigned request gets `403` **by design**; call it with `python deploy/invoke.py` |
+| **Run it yourself** | [Quickstart](#quickstart) — a CockroachDB connection string is the only hard requirement |
+| **Tests** | 12 suites, `python scripts/test_all.py` |
+| **How it fits together** | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| **Every prediction, graded** | [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) — including the two we falsified |
+
 When an AI agent reads state, reasons over it, and writes a result, another
 agent may change the state it reasoned about in between. RaceLab tests a
 falsifiable hypothesis about what to do when that happens:
@@ -188,6 +197,112 @@ cycle can start on any day), and it was **inconsistent** about flagging a missin
 period until the language declared its own default — so *no period stated* now
 means cumulative, and three compilations of one policy produce one fingerprint.
 
+### What compiling the rule cost us, honestly
+
+Wiring the compiler into the write paths produced a result we did not want:
+**our own hero policy does not compile.** Both versions of it —
+
+> *"Temporary authorization ceiling … is **$80 per billing cycle**, pending
+> completion of the quarterly review."*
+> *"Authorization ceiling reduced to **$60 per billing cycle**, effective
+> immediately."*
+
+— come back `unenforceable`, because a billing cycle can start on any day and
+"pending the quarterly review" has no end date. The compiler is right both times.
+The regex read the same sentences and produced a confident `$80`.
+
+So the gateway refuses to authorize anything against that account until a person
+says what the rule means (`scripts/compile_policies.py --resolve`), and the
+clarification is compiled, versioned and attributed like any other policy. That
+is a worse demo and a better system, and it is the kind of finding that only
+appears when you stop letting a regular expression answer the question.
+
+### Which rule is in force, and what happens when nobody knows
+
+`racelab/policy_gate.py` resolves policy for both write paths — the Lambda
+gateway and the MCP server — so two write paths cannot hold two readings of one
+rule. Five states, and **four of them refuse**:
+
+| State | Meaning | Write |
+|---|---|---|
+| `none` | no policy document; only the hard limit binds | ✅ allowed |
+| `compiled` | a current, enforceable constraint compiled from the governing document | ✅ allowed, version recorded |
+| `uncompiled` | a policy exists and nothing was compiled from it | ❌ **refused** |
+| `stale` | Legal rewrote the rule; nobody recompiled | ❌ **refused** |
+| `unenforceable` | the constraint has clauses the language cannot express | ❌ **refused** |
+
+`uncompiled` and `stale` are states the regex **could not have**. It read whatever
+text was newest and produced a number, so a policy change nobody noticed still
+produced confident enforcement of *something*. Refusing is the honest answer, and
+it fails in the direction of not spending money.
+
+The constraint enforced is the one compiled from **the document in force**, not
+the highest version number — so a reverted policy brings its own constraint back
+with it rather than leaving a newer version in charge of a document it never read.
+Total, hard limit, governing document and compiled constraint are read in **one
+statement inside the transaction**, so the rule a write is checked against
+provably shares a read timestamp with the state it is checked over.
+
+Every decision now records `decisions.policy_version`, which answers *"which
+decisions were made under the old cap?"* — a question that was previously
+unanswerable, because the decisions look identical and only the ceiling moved.
+
+### Point it at your table, not ours
+
+The gateway used to have `allocations`, `account_id` and `SUM(amount)` written
+into its SQL. Now the resource is declared:
+
+```yaml
+resource:     refunds
+scope_column: customer_id
+aggregate:    SUM(amount)
+hard_limit:   customers.refund_pool
+policy_limit: compiled
+actions:      [50, 100, 250]
+```
+
+`scripts/test_binding.py` — 31/31 — points the **deployed handler**, unmodified,
+at that table and proves the guarantee holds on it: 6 concurrent writers, 9
+conflicts, stopped at the compiled `$300` rather than the `$500` pool, no refused
+action ever committed. `grep -rn refund racelab/ deploy/` finds nothing outside a
+docstring, and the suite asserts that.
+
+A binding is edited text that reaches SQL, so it gets the same treatment model
+output gets: bare-identifier syntax, then an allowlist read from
+`information_schema` — and a mistyped key is an error rather than a silently
+dropped `hard_limit`.
+
+Pointing it at a second resource also found a real bug. The handler took the
+first action that fit, which was greedy only because `allocations` happens to
+list `[45, 40, 35]` descending. A binding listing its actions ascending would
+have produced a *minimal* agent from the same code, under the same name, with no
+error anywhere.
+
+### The guarantee, under interleavings nobody designed
+
+`scripts/test_property_concurrency.py` uses `hypothesis` to generate the agent
+count, action space, both limits, the moment the policy changes and the arrival
+stagger, then asserts three properties on every world:
+
+- **P1** the hard limit is never exceeded.
+- **P2** a refused action never commits — checked against the ledger, not against
+  the wrapper's own bookkeeping.
+- **P3** a total never exceeds the **highest ceiling that was ever in force**.
+
+P3 is deliberately weaker than "never exceeds the current ceiling", and the
+weakness is the honest part: no protocol can revoke a valid commit, and this
+project has published that. Asserting the stronger property would be asserting
+something we know to be false.
+
+The falsification check is the part worth reading. The first version of it
+*failed to fail*: removing the guardrail from a conflict-aware agent left the
+invariant intact. That is not a broken check — it is the C-ops result showing up
+again, an agent that re-reads and re-decides never breaks the hard limit. The
+configuration that actually breaks P1 is the **naive** one, which overshot to
+`$270` against a `$60` limit with the guardrail off and held at `$45` with it on.
+So the precise claim is *the guardrail is what protects you from a replaying
+agent*, not the looser "the guardrail keeps the invariant" we might have written.
+
 ### The guardrail: enforced, not observed
 
 Everything above measures *behaviour*. On its own that leaves a hole a reviewer
@@ -310,14 +425,17 @@ whether that policy moved mid-flight, and which actions would still fit. The
 server deliberately does **not** retry — retrying would replay the same amount,
 the exact failure this project measures. The agent re-decides in its own context.
 
-Verified with five concurrent MCP clients: `{committed: 2, reconsider: 3}`,
-18/18 checks, driven as a real client over stdio. See `docs/MCP_SERVER.md`.
+Verified with five concurrent MCP clients: `{committed: 1, reconsider: 4}`,
+29/29 checks, driven as a real client over stdio — including the state where a
+policy document moved and nothing was compiled from it, so the tool refuses every
+write. See `docs/MCP_SERVER.md`.
 
 **Agent Skills Repo — a contribution back.**
 `contrib/cockroachdb-skills/` holds
 `retrying-agent-decisions-under-contention`, written for
-`cockroachlabs/cockroachdb-skills` and validated at **0 errors** with the
-repository's own `scripts/validate-spec.py`.
+`cockroachlabs/cockroachdb-skills` and validated at **0 errors** with *that*
+repository's own `scripts/validate-spec.py` (theirs, not ours — it is not a file
+in this repo).
 
 It exists because reading `designing-application-transactions` first showed that
 two pieces of its guidance are individually correct and, composed for an agent,
@@ -665,14 +783,24 @@ only thing that recovers it is going back to memory.
 **That distinction is why this is an agentic-memory contribution and not a
 concurrency library.** Both are measured, and both are primary.
 
-## The four arms
+## The five arms
 
 | Arm | What it has | Hard limit | Policy ceiling |
 |---|---|---|---|
 | **A** · postgres RC · naive | no signal | ✗ fails | ✗ fails |
+| **A-rc** · cockroach RC · naive | no signal — *the control* | ✗ fails | ✗ fails |
 | **B** · cockroach · naive | signal, ignored | ✗ fails | ✗ fails |
 | **C-ops** · cockroach · ablation | state refresh | ✓ held | ✗ **breached** |
 | **C** · cockroach · full | state + memory refresh | ✓ held | ✓ held where reachable |
+
+**`A-rc` is the arm that carries the isolation comparison, not `A`.** Arm A is
+stock PostgreSQL on localhost, so `B − A` varies the database *and* the network
+latency at once — a headline built on it was withdrawn (METHODOLOGY entry 15).
+`A-rc` is CockroachDB at READ COMMITTED on the same cluster, so the only thing
+that differs from `B` is the isolation level. Arm A stays as an external-validity
+check — *does this reproduce on stock PostgreSQL at default isolation?* Yes,
+45/50 runs over the hard limit with zero errors raised — and it is the reason
+PostgreSQL is optional to run at all.
 
 C-ops is the ablation, and it is the row that carries the argument. It
 re-reasons on every conflict exactly like C, but over memory retrieved once and
@@ -812,6 +940,11 @@ above.
 | `docs/ARCHITECTURE.md` | How the pieces fit, and every failure path |
 | `docs/MCP_SERVER.md` | RaceLab **as** an MCP server: a guarded write for any agent |
 | `racelab/policy.py` | The policy compiler: natural language → an enforceable constraint |
+| `racelab/policy_gate.py` | Which compiled constraint governs a write, and when to refuse |
+| `racelab/binding.py` | Declarative resource binding: enforce a table without code |
+| `bindings/*.yaml` | The declared resources, including the one our own demo runs on |
+| `scripts/compile_policies.py` | Compile a policy once, off the write path, and version it |
+| `scripts/test_property_concurrency.py` | `hypothesis` over agent counts, limits and policy timing |
 | `deploy/` | Lambda gateway, IAM policy, signed client |
 
 ## Quickstart
@@ -828,7 +961,19 @@ cp .env.example .env               # CockroachDB DSN + AWS credentials
 python -m racelab.schema --backend crdb
 python scripts/seed.py --reset
 
-python scripts/test_all.py         # the whole suite
+python scripts/test_all.py         # the whole suite (12 suites)
+```
+
+To use the write gateway or the MCP server against an account, its policy has to
+be compiled first — they refuse to authorize under a rule nothing has read:
+
+```bash
+python scripts/compile_policies.py --show
+python scripts/compile_policies.py --account hero-001
+# hero-001's policy is genuinely ambiguous, so it needs a human reading:
+python scripts/compile_policies.py --account hero-001 \
+  --resolve "The authorization ceiling for this account is \$60. This is a \
+cumulative total across all allocations, with no reset period."
 ```
 
 That runs the complete comparison, because **arm `A-rc` is the READ COMMITTED
@@ -954,6 +1099,11 @@ make test-schema    # just the clean-clone schema check
   The arms carrying the ablation claim have zero within-cell variance to resolve —
   C-ops ends at exactly `80.0` in all fifty of its runs. Entry 13 states the
   trade, what it costs, and the 100-run cell that was not run.
+
+  *(The "exactly `80.0` in all fifty runs" figure in that entry was itself
+  narrowed later: the controlled sweep found one cell at `78.0`. Entry 16 has
+  the correction, and the general claim is now tested across random action
+  spaces instead of resting on one number.)*
 
 - **Two of our own tables disagreed, and we reconciled them with a script rather
   than an argument.** Entry 1 reported 0/3 hard-limit violations where the swept

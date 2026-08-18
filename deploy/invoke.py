@@ -84,15 +84,20 @@ def url_for(region: str) -> str:
 
 def describe(status: int, body: dict) -> str:
     outcome = body.get("outcome", "?")
+    policy = (f"policy={body.get('policy_status')}"
+              + (f" v{body['policy_version']}" if body.get("policy_version") else ""))
     if status == 409:
-        return (f"  {status} REFUSED  {body.get('reason', '')[:90]}\n"
-                f"       proposed and rejected: {body.get('refused_actions')}")
+        lines = [f"  {status} REFUSED  {body.get('reason', '')[:100]}", f"       {policy}"]
+        if body.get("refused_actions"):
+            lines.append(f"       proposed and rejected: {body['refused_actions']}")
+        return "\n".join(lines)
     bits = [f"  {status} {outcome:<10} action={body.get('action')}"]
     if body.get("conflicts"):
         bits.append(f"conflicts={body['conflicts']}")
     if body.get("revised"):
         bits.append("REVISED")
-    bits.append(f"ceiling={body.get('inferred_ceiling')}")
+    bits.append(f"limit={body.get('policy_limit')}")
+    bits.append(policy)
     bits.append(f"dsn={body.get('dsn_source')}")
     return "  ".join(bits)
 
@@ -137,12 +142,26 @@ def main() -> int:
             rows = conn.execute(
                 "SELECT agent_id, amount FROM allocations WHERE account_id = %s "
                 "ORDER BY agent_id", (args.account,)).fetchall()
+            policy = conn.execute(
+                "SELECT version, enforceable, source_memory_id FROM policy_constraints "
+                "WHERE account_id = %s ORDER BY version DESC LIMIT 1",
+                (args.account,)).fetchone()
         total = sum(r[1] for r in rows)
         print(f"\nledger: {rows}")
-        print(f"total ${total}  (policy ceiling $60, hard limit $100)")
-        print("\nThe agents that could not fit under the ceiling abstained rather")
-        print("than overshooting, and every decision is in CloudWatch with the")
-        print("ceiling it was reasoning against.")
+        print(f"total ${total}")
+        if policy:
+            print(f"newest compiled policy: v{policy[0]} from {policy[2]} "
+                  f"(enforceable={policy[1]})")
+        else:
+            print("no compiled policy for this account -- the gateway refuses "
+                  "every write until scripts/compile_policies.py has run")
+        print("\nThe agents that could not fit under the compiled ceiling abstained")
+        print("rather than overshooting, and every decision is in CloudWatch with")
+        print("the policy version it was made under.")
+        print("\nIf a call was refused with policy_status=stale, that is the point:")
+        print("the policy document moved and nothing was compiled from it, so")
+        print("nothing is authorized until someone recompiles. Run:")
+        print(f"    python scripts/compile_policies.py --account {args.account}")
     return 0
 
 

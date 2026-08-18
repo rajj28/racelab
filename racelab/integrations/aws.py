@@ -177,12 +177,20 @@ def log_event(event: str, *, level: str = "INFO", **fields) -> None:
 
 def log_decision(*, run_id: str, agent_id: str, attempt_no: int, observed,
                  inferred_constraint=None, action: str | None = None,
-                 refused: str | None = None, retrieved_ids=None) -> None:
+                 refused: str | None = None, retrieved_ids=None,
+                 policy_version: int | None = None,
+                 policy_status: str | None = None) -> None:
     """The record that makes an agent's decision auditable after the fact.
 
     `inferred_constraint` is the field worth having: without it you cannot tell
     a model that reasoned badly from a model that reasoned correctly over a stale
     document, and those need opposite fixes.
+
+    `policy_version` and `policy_status` are what make that answerable *later*.
+    A Logs Insights query can now separate the decisions taken under v2 from
+    those taken under v3, and can count the requests refused because the policy
+    could not be enforced at all -- which looks nothing like a limit breach and
+    would otherwise be filed as one.
     """
     log_event(
         "agent_decision",
@@ -191,6 +199,8 @@ def log_decision(*, run_id: str, agent_id: str, attempt_no: int, observed,
         attempt_no=attempt_no,
         observed_state=observed,
         inferred_constraint=inferred_constraint,
+        policy_version=policy_version,
+        policy_status=policy_status,
         action=action,
         constraint_refused=refused,
         retrieved_ids=list(retrieved_ids) if retrieved_ids else None,

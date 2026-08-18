@@ -11,3 +11,13 @@ langchain-core>=1.0
 # Optional. Only `racelab.integrations.mcp_server` needs this -- it turns the
 # guardrail into a tool any MCP client can call.
 mcp>=2.0
+
+# Resource bindings (`bindings/*.yaml`, racelab/binding.py). A binding can also
+# be written as .json, which needs nothing, so this is optional -- but the
+# shipped bindings are YAML because a spec someone edits should be readable.
+pyyaml>=6.0
+
+# Optional. Only scripts/test_property_concurrency.py needs this: it generates
+# agent counts, action spaces, limits and policy-change timings, and shrinks any
+# counterexample. Nothing the library ships depends on it.
+hypothesis>=6.100

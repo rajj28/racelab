@@ -359,8 +359,9 @@ class SqlTelemetry:
             """
             INSERT INTO decisions (decision_id, run_id, agent_id, attempt_no, policy,
                                    retrieved_memory_ids, inferred_ceiling, observed_sum,
-                                   proposed_amount, decision_before, decision_after, revised)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                   proposed_amount, decision_before, decision_after,
+                                   revised, policy_version)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 str(uuid.uuid4()), run_id, agent_id, attempt_no, policy,
@@ -369,6 +370,12 @@ class SqlTelemetry:
                 getattr(proposal, "observed_sum", None),
                 getattr(proposal, "amount", None),
                 before, after, revised,
+                # Read with getattr like every other domain field: the library
+                # does not know what a policy version is, and a caller that has
+                # none simply does not set one. Recording it here rather than at
+                # the call site means every write path that uses the wrapper
+                # gets the provenance without asking for it.
+                getattr(proposal, "policy_version", None),
             ),
         )
 

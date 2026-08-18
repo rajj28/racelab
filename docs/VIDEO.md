@@ -1,178 +1,206 @@
-# RaceLab — 3-minute video script
+# RaceLab — 3-minute submission video script
 
-Every number spoken here is in the repository and reproducible. The two moments
-that cut against us are in the script on purpose — they are the most persuasive
-twenty seconds in it.
+**Read `docs/DEMO.md` beside this.** This file is *what you say*; DEMO.md is
+*what is on screen*, with the exact commands that produce it.
 
-**Measured: 529 spoken words. 3:32 at 150 wpm, 3:12 at 165.**
+**Measured: 468 spoken words → 3:07 at 150 wpm, 2:50 at 165.** Counted with the
+command at the bottom, not estimated — three earlier drafts all *felt* like three
+minutes and ran over four. Re-count after any edit.
 
-Counted with a script rather than estimated, and the estimating went badly three
-times: drafts came in at 758 words (5:03) and 641 (4:16), and both *felt* like
-three minutes while reading them. Trust the counter at the bottom of this file,
-not your ear.
+**To land under 3:00, do one of these:**
 
-**To land under 3:00, do one of these — not both:**
+- **Read at 160–165 wpm** — a normal presenting pace — and you finish at ~2:50
+  with the beats intact. This is the recommended option.
+- Or cut the `2:05` binding section (51 words → ~2:44 at 150 wpm). It is the
+  designated cut because it is the only section whose removal costs a *second*
+  proof of generality rather than a step in the argument. It costs you the
+  "point it at your table" story, so cut it last.
 
-- Read at 165 wpm and cut the `2:05` section ("The finding we didn't expect",
-  ~95 words). Gets you to ~2:40. This is the recommended cut: it is the only
-  section whose removal costs an interesting aside rather than a step in the
-  argument.
-- Or keep everything and accept ~3:15, if the submission allows any overrun.
-
-Never cut the reveal. If something has to go, it goes from the setup at `0:12`.
-Section timings below are targets for pacing, not a budget that sums to the
-measured total.
+Never cut `1:30`. The compiler refusing our own policy is the most credible
+fifteen seconds in the video.
 
 ---
 
-## 0:00 – 0:12 · Hook
+## Why this script was rewritten
 
-**On screen:** `docs/demo.gif`. Nothing else. Cut on its final frame.
+The previous version could not be recorded. It asserted two claims this project
+has since **publicly retracted**, and a judge who read `README.md` afterwards
+would have found them contradicted by our own repository:
 
-> Two AI agents check the same budget. Both see room. Both approve.
-> The money is gone twice — and the database reports no error at all.
+| Old line | Status |
+|---|---|
+| *"And it still went over budget… Worse than PostgreSQL, on average."* | **RETRACTED.** `B − A` was confounded — arm A is a different database *and* a different network latency. Controlled against `A-rc`, serializable isolation *helps* even a naive client. METHODOLOGY entry 15. |
+| *"Exactly eighty… nine measurements, zero variance."* | **RETRACTED.** `45 + 35 = 80` is arithmetic we chose, and the controlled sweep found `78.0`. Entry 16. |
+
+Neither appears below. Every number spoken here is in the repository at the
+values in README §Results, or in the capture the demo actually runs.
+
+## What the format demands, and where each is met
+
+| Requirement | Where |
+|---|---|
+| Problem + who it's for, one sentence, up front | `0:00` |
+| Live demo within 20–30 s | `0:16` — real terminal, real cluster |
+| AWS services named **on screen** | lower third from `0:16`, full slate at `2:25` |
+| CockroachDB features named **on screen** | same |
+| Memory visibly stored, retrieved, acted on | `0:50` — `remember` → `recall` → refusal |
+| How a real user interacts | the demo *is* the product: an MCP tool and a signed HTTP gateway |
+| Under 3:00 | 2:50 at 165 wpm; designated cut if slower |
 
 ---
 
-## 0:12 – 0:35 · Why the database doesn't stop it
+## 0:00 – 0:16 · The problem, then straight in
 
-**On screen:** the three numbered steps, revealed one at a time.
+**On screen:** one title card, four seconds. Then cut to a terminal. No logo
+animation, no team intro, no agenda slide.
 
-> One account, a hundred dollars, twenty agents each wanting forty-five. Three of
-> them read the balance before any of them wrote. All three approved. Thirty-five
-> dollars over budget, and every agent reasoned correctly.
+> Companies are handing AI agents the power to spend money. When two agents check
+> the same budget at once, both see room, both approve, and it goes out twice.
+>
+> Here it is happening.
+
+**Lower third, from here to the end:**
+`CockroachDB Cloud · AWS Lambda · Bedrock · Secrets Manager · CloudWatch`
+
+---
+
+## 0:16 – 0:50 · Live: the race, and the one-line fix
+
+**On screen:** twenty agents racing, running total climbing. DEMO.md beat 2.
+
+> Twenty agents, a hundred-dollar budget. On default isolation the ledger ends
+> hundreds of dollars over — and the database raises zero errors. It did what it
+> was asked. Nobody asked it this.
+
+**Beat. Switch pane.**
+
+> Serializable isolation catches it — sixteen hundred serialization failures
+> across the sweep. But the standard fix is to retry the transaction, and a retry
+> resubmits the answer that just went stale.
+>
+> So we changed one thing. On a conflict, throw the decision away and decide again
+> against fresh state. One boolean.
+
+**On screen:** the arm table, the `0/50` column highlighted.
+
+> Fifty runs over the limit, down to zero.
+
+---
+
+## 0:50 – 1:30 · The memory, visibly
+
+**On screen:** Claude Code driving the RaceLab MCP server. Real tool calls, real
+JSON. Not a slide.
+
+> But the rule that matters isn't in the database. This account's cap lives in a
+> policy document, found by vector search. Watch an agent store it, retrieve it,
+> and get stopped by it.
+
+**Beat — let all three tool calls play: `remember`, `recall`, `decide_and_write`.**
+
+**Overlay:** `CockroachDB VECTOR(1024) + vector index · Bedrock Titan embeddings`
+
+> `remember` writes the policy. `recall` finds it by meaning, through
+> CockroachDB's vector index. `decide_and_write` refuses — stopped inside the
+> transaction, before the commit, naming the rule and its version.
 
 **Beat.**
 
-> The rule is "everything added up stays under the limit" — a statement about many
-> rows at once, so it can't be a constraint on any one row. The database did what
-> it was asked. Nobody asked it this.
-
----
-
-## 0:35 – 1:02 · What stronger isolation does, and doesn't
-
-**On screen:** arm A and arm B rows from `race_arm_comparison`.
-
-> PostgreSQL at default isolation went over budget nine runs in ten and raised
-> zero errors — it committed the broken state silently. CockroachDB at
-> serializable caught it: six hundred serialization failures, correctly raised.
-
-**Beat. This is the turn.**
-
-> And it still went over budget. Ten runs in ten. Worse than PostgreSQL, on
-> average.
+> Now Legal lowers the cap. An agent that only re-reads the balance never
+> notices — the balance was never wrong. The rule moved, and the rule was never in
+> the database.
 >
-> Because the retry logic ran the transaction again and submitted the same answer.
-> Every retry was another chance for a stale decision to land.
-
----
-
-## 1:02 – 1:15 · The fix, in one line
-
-**On screen:** the two `ConflictAware` constructors, `re_reason` highlighted.
-
-> So we changed one thing: on a serialization failure, throw the decision away and
-> decide again against fresh state. The two versions differ by a single boolean.
-> Budget violations went from ten out of ten to zero, at every timing.
-
----
-
-## 1:15 – 2:05 · The reveal
-
-**On screen:** hold on `$80.00`. Two full seconds of silence before speaking.
-
-> Then this happened.
->
-> Halfway through each run we lower the approval cap from eighty dollars to sixty.
-> It lives in the notes the agent reads before deciding — and nowhere in the
-> database.
->
-> The agent that re-reads the balance finished at exactly eighty dollars.
->
-> Not about eighty. Exactly eighty — across all five timings we swept, and again
-> with Claude Sonnet 4.5 doing the reasoning. Nine measurements, zero variance.
-
-**Beat.**
-
-> Under budget. Re-read the balance perfectly. The database was completely
-> satisfied — and it landed precisely on the cap that had been withdrawn while it
-> was working.
-
-**On screen:** the two-rule split.
-
-> Re-reading the balance can't help. The balance was right. The rule moved, and
-> the rule was never in the database. The version that re-read the notes finished
-> at forty-five, inside both limits.
->
-> Re-reading state protects the rule in your database. Only re-reading memory
+> Re-reading state protects the rule in your database. Only refreshing memory
 > protects the rule in your agent's head.
 
 ---
 
-## 2:05 – 2:28 · The finding we didn't expect
+## 1:30 – 2:05 · The part we did not expect
 
-**On screen:** the model's verbatim rationale beside the action it chose.
+**On screen:** the compiler refusing our own policy. Real terminal output.
 
-> With a real language model reasoning, three times in sixty it chose an action
-> that broke the cap it had just told us it inferred. In the same response:
+> That cap used to be pulled from the document with a regular expression. A regex
+> finds a dollar sign. It cannot find "per billing cycle", or "tier two only".
 >
-> *"Allocating forty-five would bring the total to eighty, which exceeds this
-> ceiling."*
->
-> And then it allocated forty-five.
+> So a model compiles the policy once, into a constraint the database enforces
+> with no model in the loop.
 
-**Beat.**
+**Beat. Hold on the word UNENFORCEABLE.**
 
-> Nothing inside the system catches that. The transaction is perfectly
-> serializable. The state was read correctly. And asking the model to check its
-> work returns the check it already did.
+> The first thing it did was refuse our own policy.
 >
-> So the guardrail has to sit outside the model — a library, not a prompt.
+> "Eighty dollars per billing cycle" — a cycle starts on any day, so it isn't a
+> calendar month, and the compiler won't guess. The regex read that same sentence
+> and returned a confident eighty.
+
+**On screen:** the gateway returning `409`, `policy_status` visible.
+
+> The gateway now authorizes nothing there until a person says what the rule
+> means — and that reading is compiled, versioned and attributed. A worse demo. A
+> much better system.
 
 ---
 
-## 2:28 – 2:45 · What we broke, and published
+## 2:05 – 2:25 · Point it at your table
 
-**On screen:** `docs/METHODOLOGY.md` scrolling, then the four-outcome card.
+**On screen:** `bindings/refunds.yaml`, then the suite passing.
 
-> Our first full sweep produced exactly the result we predicted. So we checked
-> why — and a three-hundred-ninety-one millisecond connection handshake meant the
-> arm that was supposed to have stale memory never had any. It agreed with us for
-> the wrong reason. We threw it out and re-ran. The discarded data is still in the
-> repo.
-
-**Beat.**
-
-> A serialization failure tells your agent something changed. It doesn't tell it
-> to think again. That gap is measurable — and it's where agents lose money.
+> None of this is about our scenario. The resource is twenty lines of YAML: a
+> table, a scope column, an aggregate, where the limit lives.
+>
+> That's a refunds table. There is no refund code in this project — the test
+> asserts it. Six concurrent writers, real contention, stopped at the compiled
+> limit rather than the bigger pool behind it.
 
 ---
 
-## Shot list
+## 2:25 – 2:50 · The stack, and the close
 
-| # | Asset | Where it is |
-|---|-------|-------------|
-| 1 | Demo GIF, `$110` vs `$100` | `docs/demo.gif` |
-| 2 | Three numbered steps | inspector page, "What actually happened" |
-| 3 | Arm comparison table | `SELECT * FROM race_arm_comparison` via MCP |
-| 4 | `re_reason` diff | `racelab/conflict.py` |
-| 5 | The `$80.00` card | inspector page, "Re-checks the balance" |
-| 6 | Two-rule split | inspector page, "Then it gets harder" |
-| 7 | Model rationale vs action | README, "The model's reasoning was correct…" |
-| 8 | Methodology log | `docs/METHODOLOGY.md`, entries 10–14 |
+**On screen:** the full slate. Hold three seconds — judges verify from this frame.
+
+```
+CockroachDB                    AWS
+  Distributed vector indexing    Bedrock — Titan embeddings, Claude Sonnet 4.5
+  SERIALIZABLE isolation         Lambda — the deployed write gateway
+  Managed MCP Server             Secrets Manager — the database credential
+  ccloud CLI                     CloudWatch — one record per decision, alarmed
+                                 S3 — layer artifacts
+```
+
+> Every decision is in CloudWatch with the policy version it was made under.
+> Twelve test suites. Two of our own predictions were falsified, and both are
+> published.
+
+**Beat.**
+
+> Serializable isolation tells your agent something changed. It doesn't tell it to
+> think again. That gap is measurable — and it's where agents lose money.
+
+---
 
 ## Delivery notes
 
-- **The reveal at 1:15 is the whole video.** Two seconds of silence on `$80.00`
-  before the first word. Everything before it makes that number mean something;
-  everything after explains why it matters.
-- **Say "exactly eighty" twice.** The precision is the evidence.
-- **Read the adverse findings flat.** "Worse than PostgreSQL, on average" and "it
-  agreed with us for the wrong reason" land hardest as plain facts, not
-  confessions.
-- Avoid "invariant", "write skew", "SQLSTATE" and "READ COMMITTED" in narration.
-  They stay in the repo for anyone who wants them; in three minutes they cost
-  more than they buy.
-- Re-count after any edit:
-  `python -c "import pathlib;s=pathlib.Path('docs/VIDEO.md').read_text(encoding='utf-8');print(sum(len(l.strip().lstrip('>').split()) for l in s.splitlines() if l.strip().startswith('>')))"`
+- **Be in the terminal by 0:16.** If you are still on a slide at 0:30, cut the
+  opening paragraph — never the demo.
+- **Never speak a retracted number.** Not "worse than PostgreSQL", not "exactly
+  eighty, zero variance". They are tabled at the top of this file so you can
+  catch them if an old take creeps back in.
+- **The two moments that sell it are the refusals**: `decide_and_write` at `0:50`
+  and the compiler refusing *our own policy* at `1:30`. Read both flat. A system
+  that says no to its authors is the most credible thing in the video.
+- Hold the slate at `2:25` for three full seconds. Someone is screenshotting it
+  to tick requirements.
+- Avoid in narration: "invariant", "write skew", "SQLSTATE", "40001", "READ
+  COMMITTED". Say "default isolation" and "serialization failure".
+- **Recording:** 1920×1080, terminal at 16–18 pt. `policy_status: "stale"` must
+  be readable without pausing.
+- **Upload early.** Public or unlisted, playable without a login, then open your
+  own Devpost page and watch it back from there.
+
+Re-count after any edit:
+
+```bash
+python -c "import pathlib;s=pathlib.Path('docs/VIDEO.md').read_text(encoding='utf-8');\
+w=sum(len(l.strip().lstrip('>').split()) for l in s.splitlines() if l.strip().startswith('>'));\
+print(f'{w} words -> {w/150:.2f} min at 150 wpm, {w/165:.2f} at 165')"
+```

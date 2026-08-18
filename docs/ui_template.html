@@ -196,6 +196,42 @@
 
   /* ---------------- the two rules ---------------- */
   .rules2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 26px; }
+
+  /* The memory corpus. Rows, not cards: these are database rows and reading
+     them in order is the point -- the last one is the one that changes the rule. */
+  .memlist { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .mem {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-left: 3px solid var(--hairline);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .mem.policy { border-left-color: var(--accent-line); }
+  .mem.arrives-later {
+    border-left-color: var(--crit);
+    background: var(--surface);
+    box-shadow: 0 0 0 1px var(--crit) inset;
+  }
+  .mem-top {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .mem-id {
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
+  }
+  .mem-kind {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3);
+    border: 1px solid var(--hairline); border-radius: 999px; padding: 1px 8px;
+  }
+  .mem-kind.policy { color: var(--accent); border-color: var(--accent-line); }
+  .mem-flag {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--crit); font-weight: 700;
+  }
+  .mem-text { font-size: 15px; line-height: 1.55; }
+  .mem.superseded .mem-text { color: var(--ink-3); text-decoration: line-through; }
   .rulecard {
     background: var(--surface);
     border: 1px solid var(--hairline);
@@ -557,14 +593,47 @@
   </section>
 
   <section>
-    <h2>Four ways to handle it</h2>
+    <h2>The notes the agents actually read</h2>
     <p>
-      All four run the identical workload. They differ only in what they do when
-      the database says <em>"someone changed this underneath you."</em>
+      These are the real rows in the <code>memories</code> table on CockroachDB.
+      Before each decision an agent asks
+      <em id="mem-query">—</em> and gets the closest matches back by
+      <strong>meaning</strong>, not by keyword — CockroachDB's vector index over a
+      <code>VECTOR(1024)</code> column, embedded with Amazon Bedrock Titan.
+    </p>
+    <p>
+      One of these arrives <strong>after the run starts</strong>. That is the
+      policy change, and it is the only place the new cap exists.
+    </p>
+    <div class="memlist" id="memlist"></div>
+    <div class="aside">
+      <p><b>Why this is the whole point.</b> The <b>$100</b> budget is a column —
+         re-reading the balance recovers it. The cap in these notes is not a
+         column anywhere, so no amount of re-reading the balance will tell you it
+         moved. The only way to notice is to read the notes again.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Five ways to handle it</h2>
+    <p>
+      Every one runs the identical workload — same twenty agents, same seed, same
+      arrival timing. They differ only in what happens when the database says
+      <em>"someone changed this underneath you."</em>
       <strong>Pick one to see inside it.</strong>
     </p>
     <div class="outcomes" id="outcomes" role="group" aria-label="Choose an approach"></div>
     <div class="picked-note" id="picked-note"></div>
+
+    <div class="aside">
+      <p><b>Why are there two "no protection" rows?</b> <b>A</b> is stock
+         PostgreSQL and <b>A-rc</b> is CockroachDB at the same default isolation
+         level. We report both because comparing across two different databases
+         also compares two different network latencies — and a headline claim we
+         built on exactly that comparison turned out to be confounded, so we
+         withdrew it. <b>A-rc</b> is the honest control: same cluster, same
+         latency, only the isolation level changes.</p>
+    </div>
   </section>
 
   <section>
@@ -630,6 +699,8 @@
   var HUMAN = {
     "A":     { name: "Ordinary database",
                how: "Never told that anything changed underneath it." },
+    "A-rc":  { name: "Same database, no protection",
+               how: "The control: identical cluster, only the safety setting is off." },
     "B":     { name: "Told, and ignores it",
                how: "Retries — but submits the same answer it already had." },
     "C-ops": { name: "Re-checks the balance",
@@ -638,7 +709,19 @@
                how: "Works the answer out again, and re-reads the notes first." }
   };
 
-  var selected = 2;               // opens on "re-checks the balance": the useful case
+  /* A missing entry used to render the raw arm id with no description, which
+     looked like a broken card rather than a new arm. Adding `A-rc` fixed the
+     symptom; this makes the next one impossible to miss instead of shipping it. */
+  (function checkHuman() {
+    for (var i = 0; i < arms.length; i++) {
+      if (!HUMAN[arms[i].id]) {
+        console.warn("RaceLab UI: no plain-language name for arm '" + arms[i].id +
+                     "'; it will render as its raw id. Add it to HUMAN.");
+      }
+    }
+  })();
+
+  var selected = 4;               // opens on "re-checks balance and notes": the result
   var openAgentId = null;
 
   var SVGNS = "http://www.w3.org/2000/svg";
@@ -941,9 +1024,18 @@
       "<span style='color:var(--ink-3)'>declined</span>" +
       "<span style='color:var(--crit)'>gave up</span>";
 
+    /* `isolation` is null when the arm takes the backend's default rather than
+       naming one explicitly, and printing that raw put the words "at null" on
+       the page. The default is not unknown -- it is the documented default of
+       whichever backend ran -- so it is resolved and labelled as such. */
+    var iso = a.isolation;
+    if (!iso) {
+      iso = (a.backend === "crdb" ? "SERIALIZABLE" : "READ COMMITTED") + " (default)";
+    }
+
     document.getElementById("tech-note").innerHTML =
       "Technical detail, for anyone who wants it: approach <code>" + a.id +
-      "</code> ran on <code>" + a.backend + "</code> at <code>" + a.isolation +
+      "</code> ran on <code>" + a.backend + "</code> at <code>" + iso +
       "</code>, with " + a.conflicts + " serialization failures (<code>40001</code>), " +
       a.reason_calls + " calls to the reasoning function and " + a.memory_refreshes +
       " memory refreshes across " + meta.agents + " agents. Arrival window " +
@@ -1010,6 +1102,49 @@
     if (!quiet) { host.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
   }
 
+  /* The memory corpus, rendered from the same capture as everything else.
+     It was collected and then never shown, which meant the page argued about
+     memory without ever displaying any. */
+  function renderMemories() {
+    var host = document.getElementById("memlist");
+    if (!host) { return; }
+    var corpus = DATA.corpus || [];
+    if (!corpus.length) {
+      host.innerHTML = "<p class='mem-text' style='color:var(--ink-3)'>" +
+        "No memories captured for this run.</p>";
+      return;
+    }
+
+    document.getElementById("mem-query").textContent =
+      '"' + meta.retrieval_query + '"';
+
+    /* Which row is superseded by which is recorded in the data rather than
+       guessed from timestamps, so the strike-through cannot land on the wrong
+       row if two memories share a second. */
+    var supersededIds = {};
+    corpus.forEach(function (m) {
+      if (m.supersedes) { supersededIds[m.supersedes] = true; }
+    });
+
+    host.innerHTML = corpus.map(function (m) {
+      var later = m.memory_id === meta.update_memory_id;
+      var gone = supersededIds[m.memory_id];
+      var cls = "mem " + (m.kind === "policy" ? "policy " : "") +
+                (later ? "arrives-later " : "") + (gone ? "superseded" : "");
+      return "<div class='" + cls.trim() + "'>" +
+        "<div class='mem-top'>" +
+          "<span class='mem-id'>" + m.memory_id + "</span>" +
+          "<span class='mem-kind" + (m.kind === "policy" ? " policy" : "") + "'>" +
+            m.kind + "</span>" +
+          (later ? "<span class='mem-flag'>arrives mid-run</span>" : "") +
+          (gone ? "<span class='mem-flag'>superseded</span>" : "") +
+        "</div>" +
+        "<div class='mem-text'>" + m.text + "</div>" +
+      "</div>";
+    }).join("");
+  }
+
+  renderMemories();
   renderCards();
   renderPanel();
 

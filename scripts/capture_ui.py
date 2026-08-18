@@ -140,6 +140,22 @@ class Capture:
         return out
 
 
+def read_corpus() -> list[dict]:
+    """Every memory for the hero account, including supersession links.
+
+    `supersedes` is carried through rather than left for the UI to infer from
+    timestamps: two memories written in the same second would order arbitrarily,
+    and the UI would strike through the wrong row.
+    """
+    with connect("crdb") as conn:
+        rows = conn.execute(
+            "SELECT memory_id, kind, text, supersedes, created_at FROM memories "
+            "WHERE account_id = %s ORDER BY created_at", (HERO.account_id,)
+        ).fetchall()
+    return [{"memory_id": r[0], "kind": r[1], "text": r[2],
+             "supersedes": r[3], "created_at": r[4].isoformat()} for r in rows]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -149,16 +165,6 @@ def main() -> int:
     scenario = build_scenario()
     embedder = get_embedder("titan")
     pool = ConnectionPool("crdb", size=6)
-
-    # The corpus as the agents will find it, so the UI can show every memory that
-    # exists -- including the one that does not exist yet when the run starts.
-    with connect("crdb") as conn:
-        rows = conn.execute(
-            "SELECT memory_id, kind, text, created_at FROM memories "
-            "WHERE account_id = %s ORDER BY created_at", (HERO.account_id,)
-        ).fetchall()
-    corpus = [{"memory_id": r[0], "kind": r[1], "text": r[2],
-               "created_at": r[3].isoformat()} for r in rows]
 
     payload = {
         "meta": {
@@ -172,7 +178,8 @@ def main() -> int:
             "captured_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "provider": "reference",
         },
-        "corpus": corpus,
+        # Filled in AFTER the runs. See read_corpus().
+        "corpus": [],
         "arms": [],
     }
 
@@ -224,6 +231,21 @@ def main() -> int:
                   flush=True)
     finally:
         pool.close()
+
+    # Read AFTER the runs, not before, and the difference is the whole point.
+    #
+    # This used to run first, with a comment claiming it captured "every memory
+    # that exists -- including the one that does not exist yet when the run
+    # starts". It could not: the superseding policy is written mid-run, so
+    # reading beforehand returns the corpus without it. The UI then had no
+    # supersession to display and quietly rendered a page that argued about a
+    # policy change while showing none.
+    payload["corpus"] = read_corpus()
+    if not any(m["memory_id"] == payload["meta"]["update_memory_id"]
+               for m in payload["corpus"]):
+        print(f"\nWARNING: {payload['meta']['update_memory_id']} is not in the "
+              f"captured corpus, so the policy change will not be visible in the "
+              f"UI. Did a run void before applying the update?", file=sys.stderr)
 
     out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

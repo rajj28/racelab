@@ -1,0 +1,28 @@
+# The allocation scenario this project measures, declared rather than coded.
+#
+# This file is load-bearing. The gateway and the MCP server read it at startup,
+# so the code path our own demo runs on is the same code path an unfamiliar
+# resource runs on. A hardcoded special case for `allocations` would leave the
+# general path exercised only by a test.
+name: allocations
+description: >
+  Agents allocate against a shared per-account budget. The hard limit is a
+  column; the policy ceiling is a document, compiled by racelab/policy.py.
+
+resource: allocations
+scope_column: account_id
+aggregate: SUM(amount)
+
+# accounts.hard_limit, keyed by the same account_id the sum is grouped by.
+hard_limit: accounts.hard_limit
+
+# "compiled" means the policy limit comes from policy_constraints, and the
+# gateway refuses to authorize when no current, enforceable constraint exists.
+policy_limit: compiled
+
+actions: [45, 40, 35]
+
+id_column: allocation_id
+agent_column: agent_id
+run_column: run_id
+timestamp_column: created_at

@@ -110,9 +110,19 @@ TELEMETRY = [
         decision_before      TEXT,
         decision_after       TEXT,
         revised              BOOL NOT NULL DEFAULT false,
+        -- Which compiled constraint this decision was made under. NULL means no
+        -- compiled policy governed it -- either the run predates the compiler or
+        -- the resource is bound with policy_limit: none. It is the column that
+        -- answers "which decisions were made under the old cap?", and without it
+        -- a policy change is unauditable after the fact: the decisions look
+        -- identical and only the ceiling moved.
+        policy_version       INT,
         created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
     )
     """,
+    # Existing databases predate the column. Added separately rather than by
+    # rebuilding the table, because `decisions` holds the experiment's dataset.
+    "ALTER TABLE decisions ADD COLUMN IF NOT EXISTS policy_version INT",
     "CREATE INDEX IF NOT EXISTS decisions_run_idx ON decisions (run_id)",
     # One row per transaction attempt, whatever its outcome.
     """
@@ -325,6 +335,12 @@ MCP_VIEWS = [
            d.observed_sum + COALESCE(d.proposed_amount, 0) AS resulting_total,
            d.decision_after,
            d.revised,
+           -- The version of the compiled policy in force when this decision was
+           -- made. Two rows with the same inferred_ceiling and different
+           -- policy_versions is a rule that moved; the reverse is a compilation
+           -- that changed its reading without the document changing, which is
+           -- the thing worth noticing.
+           d.policy_version,
            d.created_at
     FROM decisions d
     LEFT JOIN race_runs r ON r.run_id = d.run_id
@@ -354,6 +370,14 @@ DROP_ORDER = [
     "allocations",
     "accounts",
     "memories",
+    # The declared-binding demo resource. Created by
+    # `scripts/test_binding.py --create` rather than by `create_all`, because it
+    # exists to prove the gateway can enforce a table this schema knows nothing
+    # about -- creating it here would quietly undo the claim. It is dropped here
+    # regardless: a table left behind by a rebuild is still a table left behind,
+    # and `--drop` promising a clean database has to mean it.
+    "refunds",
+    "customers",
 ]
 
 # Views must be dropped before the tables they read from.
@@ -385,6 +409,14 @@ def create_all(conn: psycopg.Connection, *, verbose: bool = True) -> None:
         _create_vector_index(conn, verbose=verbose)
         # CockroachDB only, because the Managed MCP Server connects to a
         # CockroachDB Cloud cluster. See MCP_VIEWS_NOTE.
+        #
+        # Dropped and recreated rather than `CREATE VIEW IF NOT EXISTS`: a view
+        # that already exists keeps the column list it was created with, so a
+        # column added to `decisions` would never reach the view an agent
+        # actually queries. It looked like the schema had been applied, and the
+        # new column simply would not be there.
+        for view in VIEW_DROP_ORDER:
+            conn.execute(f"DROP VIEW IF EXISTS {view}")
         for stmt in MCP_VIEWS:
             conn.execute(stmt)
             if verbose:

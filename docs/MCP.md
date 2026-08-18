@@ -1,5 +1,14 @@
 # Inspecting RaceLab through CockroachDB Cloud's MCP Server
 
+> **This is one of two MCP documents, and they point in opposite directions.**
+> Here, RaceLab is an MCP **client**: we query our own experiment through
+> CockroachDB Cloud's Managed MCP Server. For RaceLab as an MCP **server** — a
+> guarded write that any agent can call — see
+> [`MCP_SERVER.md`](MCP_SERVER.md).
+>
+> The first inspects the experiment. The second *is* the experiment's result,
+> made callable.
+
 This experiment is queryable by an agent, and **we did not write an MCP server to
 make that true.** CockroachDB Cloud ships a Managed MCP Server that already
 exposes `list_clusters`, `list_databases`, `list_tables`, `get_table_schema`,

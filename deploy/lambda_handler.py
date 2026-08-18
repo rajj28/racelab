@@ -18,21 +18,41 @@ error to alert on.
 
 This endpoint is the alternative: **agents do not write to the ledger, they ask
 this to write for them.** It reads state in a transaction, invokes the reasoning
-step, enforces the retrieved policy before the commit, and answers with either a
-committed decision or a refusal that names the rule. Every attempt is logged with
-the constraint the agent believed it was under.
+step, enforces the compiled policy before the commit, and answers with either a
+committed decision or a refusal that names the rule and the policy version it
+came from. Every attempt is logged with the constraint the agent was held to.
 
     POST /decide
-      { "account_id": "...", "agent_id": "...", "requested": 45 }
+      { "account_id": "...", "agent_id": "...", "binding": "allocations" }
 
     200 { "outcome": "committed", "action": "allocate(35)", "revised": true,
-          "conflicts": 1, "inferred_ceiling": 60 }
-    409 { "outcome": "refused", "reason": "total would be $80, over the $60
-          ceiling", "refused_actions": ["allocate(45)"] }
+          "conflicts": 1, "policy_limit": 60, "policy_version": 3 }
+    409 { "outcome": "refused", "reason": "60 exceeds the policy limit of 60
+          (policy v3: ...)", "refused_actions": ["allocate(45)"] }
 
 A `409` is the interesting response. It means an agent proposed something its own
 policy forbade and the write was stopped before it landed -- the case that is
 silent everywhere else.
+
+## Which rule, and where it comes from
+
+Two rules, and they live in different places:
+
+    the hard limit    a column, `accounts.hard_limit`. Always enforced.
+    the policy        a document, compiled once by `racelab/policy.py` into a
+                      structured constraint and stored in `policy_constraints`.
+
+This handler **never calls a model to interpret policy**. It reads the compiled
+constraint, and if there is no current enforceable one it refuses the write and
+says which of the five states it is in (`racelab/policy_gate.py`). A gateway that
+asked a model what the rule meant on every request would be slow, non-repeatable,
+and would let a different reading of the same document authorize each write.
+
+## Which table
+
+The resource is declared, not coded -- `bindings/allocations.yaml`. Point the
+`binding` field of a request at another spec and this same handler enforces a
+table it has no code for. That is `racelab/binding.py`.
 
 ## Why Lambda suits this
 
@@ -73,7 +93,6 @@ from __future__ import annotations
 import json
 import os
 import pathlib
-import re
 import sys
 import time
 import uuid
@@ -82,13 +101,27 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import psycopg
 
+from racelab.binding import BindingError, ResourceBinding
 from racelab.conflict import ConflictAware, DecisionContext
 from racelab.integrations.aws import (log_decision, log_event,
                                       metrics_from_result, publish_metrics,
                                       resolve_dsn)
+from racelab.policy import PolicyError
+from racelab.policy_gate import PolicyGate
 
-HARD_LIMIT_DEFAULT = 100
-OPTIONS = (45, 40, 35)
+DEFAULT_BINDING = os.environ.get("RACELAB_BINDING", "allocations")
+
+# Bindings are parsed and schema-validated once per container. A binding is a
+# file, so parsing it per request would be pointless work; validating it per
+# request would be a round trip on the hot path. The validation still happens
+# against the live schema -- just once, on the first request that uses it.
+_GATES: dict[str, PolicyGate] = {}
+
+
+def _gate(name: str) -> PolicyGate:
+    if name not in _GATES:
+        _GATES[name] = PolicyGate(ResourceBinding.named(name))
+    return _GATES[name]
 
 # Resolved once per container, not per request: Secrets Manager calls are billed
 # and rate-limited, and the DSN does not change between invocations of the same
@@ -138,87 +171,21 @@ def _connection():
 
 
 class Decision:
-    """The proposal. `action` is the only attribute the wrapper requires."""
+    """The proposal. `action` is the only attribute the wrapper requires.
+
+    `policy_version` is read off this by `SqlTelemetry`, so a decision row
+    records which compiled constraint the agent was held to. Without it a policy
+    change is unauditable after the fact: the decisions look identical and only
+    the ceiling moved.
+    """
 
     def __init__(self, action: str, amount: int | None, inferred_ceiling: int | None,
-                 rationale: str = ""):
+                 policy_version: int | None = None, rationale: str = ""):
         self.action = action
         self.amount = amount
         self.inferred_ceiling = inferred_ceiling
+        self.policy_version = policy_version
         self.rationale = rationale
-
-
-def _read_total(account_id: str):
-    def read(cur) -> int:
-        cur.execute(
-            "SELECT COALESCE(SUM(amount), 0) FROM allocations WHERE account_id = %s",
-            (account_id,))
-        return int(cur.fetchone()[0])
-    return read
-
-
-# One statement instead of two. The total and the policy that constrains it were
-# separate round trips, and at ~91 ms each that is measurable. Combining them
-# also *strengthens* the correctness argument rather than trading against it:
-# both values now provably come from the same read timestamp, where before they
-# merely happened to.
-_READ_STATE = """
-WITH total AS (
-    SELECT COALESCE(SUM(amount), 0) AS t
-    FROM allocations WHERE account_id = %(acct)s
-), pol AS (
-    -- The ORDER BY is inside the aggregate deliberately. An ORDER BY in the
-    -- subquery does not guarantee the order `array_agg` collects in, and the
-    -- newest policy must be first: the whole scenario turns on a superseding
-    -- policy winning over the one it replaced. It happened to come out right
-    -- in testing, which is exactly how this kind of bug survives to production.
-    SELECT array_agg(memory_id ORDER BY created_at DESC) AS ids,
-           array_agg(text ORDER BY created_at DESC) AS texts
-    FROM (
-        SELECT memory_id, text, created_at FROM memories
-        WHERE account_id = %(acct)s AND kind = 'policy'
-        ORDER BY created_at DESC LIMIT 4
-    ) s
-)
-SELECT total.t, pol.ids, pol.texts FROM total, pol
-"""
-
-
-def _read_state(cur, account_id: str) -> tuple[int, int | None, list[str]]:
-    """Read the running total and the governing policy in one round trip."""
-    cur.execute(_READ_STATE, {"acct": account_id})
-    row = cur.fetchone()
-    total = int(row[0] or 0)
-    ids = list(row[1] or [])
-    texts = list(row[2] or [])
-    ceiling = None
-    for text in texts:
-        found = re.search(r"\$\s*(\d+)", text or "")
-        if found:
-            ceiling = int(found.group(1))
-            break
-    return total, ceiling, ids
-
-
-def _infer_ceiling(cur, account_id: str) -> tuple[int | None, list[str]]:
-    """The policy, from retrieved memory rather than from a column.
-
-    Ordered by `created_at DESC` so a superseding policy wins. In the full
-    system this is a vector search over `memories.embedding`; here it is the
-    same table read directly, because the gateway must not depend on an
-    embedding call being available to enforce a rule it has already been told.
-    """
-    cur.execute(
-        "SELECT memory_id, text FROM memories "
-        "WHERE account_id = %s AND kind = 'policy' "
-        "ORDER BY created_at DESC LIMIT 4", (account_id,))
-    rows = cur.fetchall()
-    import re
-    for memory_id, text in rows:
-        found = re.search(r"\$\s*(\d+)", text or "")
-        if found:
-            return int(found.group(1)), [r[0] for r in rows]
-    return None, [r[0] for r in rows]
 
 
 def handler(event, context):  # noqa: ANN001 - AWS signature
@@ -234,59 +201,80 @@ def handler(event, context):  # noqa: ANN001 - AWS signature
     if not account_id:
         return _reply(400, {"error": "account_id is required"})
     agent_id = payload.get("agent_id") or f"lambda-{uuid.uuid4().hex[:6]}"
-    hard_limit = int(payload.get("hard_limit") or HARD_LIMIT_DEFAULT)
     run_id = payload.get("run_id") or getattr(context, "aws_request_id", "local")
 
-    ceiling_seen: dict = {"value": None, "ids": []}
+    try:
+        gate = _gate(str(payload.get("binding") or DEFAULT_BINDING))
+    except BindingError as exc:
+        return _reply(400, {"error": "unknown or invalid binding",
+                            "detail": str(exc)[:200]})
+    binding = gate.binding
+
+    # The state the decision rested on, captured on every read so the response
+    # and the telemetry can name the exact policy version in force.
+    seen: dict = {"state": None}
 
     def reason(ctx: DecisionContext) -> Decision:
-        binding = hard_limit if ceiling_seen["value"] is None else min(
-            ceiling_seen["value"], hard_limit)
-        remaining = binding - ctx.observed
-        amount = next((a for a in OPTIONS if a <= remaining), None)
+        state = seen["state"]
+        remaining = state.binding_limit - ctx.observed
+        # Largest action that fits -- the greedy agent this project measures.
+        # Sorted here rather than relying on the binding file's order: the
+        # built-in binding happens to list [45, 40, 35] descending, so taking the
+        # first that fit was greedy by coincidence. A binding listing its actions
+        # ascending would have produced a *minimal* agent from the same code,
+        # under the same name, with no error anywhere. Found by pointing this at
+        # a second resource.
+        amount = next((a for a in sorted(binding.actions, reverse=True)
+                       if a <= remaining), None)
+        # An agent under a refusing policy proposes nothing. The constraint would
+        # stop the write anyway; abstaining means the refusal is reported once,
+        # as a policy state, rather than as three identical rejected actions.
+        if not state.authorizes:
+            amount = None
         decision = Decision(
             action=f"allocate({amount})" if amount else "abstain",
             amount=amount,
-            inferred_ceiling=ceiling_seen["value"],
-            rationale=(f"observed {ctx.observed}, binding {binding}, "
-                       f"{remaining} remaining"),
+            inferred_ceiling=state.policy_limit,
+            policy_version=state.version,
+            rationale=(f"observed {ctx.observed}, binding {state.binding_limit}, "
+                       f"{remaining} remaining, policy {state.status.value}"),
         )
         log_decision(run_id=run_id, agent_id=agent_id, attempt_no=ctx.attempt_no,
                      observed=ctx.observed,
-                     inferred_constraint=ceiling_seen["value"],
+                     inferred_constraint=state.policy_limit,
                      action=decision.action, refused=ctx.refused,
-                     retrieved_ids=ceiling_seen["ids"])
+                     retrieved_ids=[state.governing_memory_id]
+                     if state.governing_memory_id else [],
+                     policy_version=state.version,
+                     policy_status=state.status.value)
         return decision
 
     def operational_read(cur) -> int:
-        # Both reads happen inside the transaction, and in ONE statement. That is
-        # the whole design: the policy this write is checked against is read at
-        # the same timestamp as the total it is checked over. Reading the policy
-        # outside the transaction would let it move between the check and the
-        # commit; reading it in a second statement merely made them *likely* to
-        # match. One statement makes it provable, and costs one round trip fewer.
-        total, ceiling, ids = _read_state(cur, account_id)
-        ceiling_seen["value"], ceiling_seen["ids"] = ceiling, ids
-        return total
+        # Total, hard limit, governing document and compiled constraint, in ONE
+        # statement. That is the whole design: the policy this write is checked
+        # against is read at the same timestamp as the total it is checked over.
+        # Reading the policy outside the transaction would let it move between
+        # the check and the commit; reading it in a second statement merely made
+        # them *likely* to match. One statement makes it provable.
+        # No fallback. An account with no row in the limit table has no hard
+        # limit, and the gate raises rather than inventing one -- an unknown
+        # scope with an unbounded budget is the shape of every interesting
+        # incident. The request cannot supply one either: an endpoint that let a
+        # caller name its own ceiling would not be a gateway.
+        state = gate.read(cur, account_id)
+        seen["state"] = state
+        return state.total
 
     def apply(cur, proposal) -> bool:
         if proposal.amount is None:
             return False
-        cur.execute(
-            "INSERT INTO allocations (allocation_id, account_id, agent_id, amount, run_id) "
-            "VALUES (%s, %s, %s, %s, %s)",
-            (str(uuid.uuid4()), account_id, agent_id, proposal.amount, run_id))
+        binding.insert(cur, scope=account_id, agent_id=agent_id,
+                       amount=proposal.amount, run_id=run_id)
         return True
 
     def constraint(cur, proposal) -> str | None:
         """Enforced here, before COMMIT, which is the only sound place for it."""
-        total = _read_total(account_id)(cur)
-        ceiling = ceiling_seen["value"]
-        if total > hard_limit:
-            return f"total would be ${total}, over the hard limit of ${hard_limit}"
-        if ceiling is not None and total > ceiling:
-            return f"total would be ${total}, over the ${ceiling} policy ceiling"
-        return None
+        return gate.check(cur, seen["state"])
 
     try:
         conn = _connection()
@@ -308,12 +296,19 @@ def handler(event, context):  # noqa: ANN001 - AWS signature
         log_event("database_unreachable", error=str(exc)[:300], level="ERROR")
         return _reply(503, {"error": "memory layer unreachable",
                             "detail": str(exc)[:200]})
+    except (BindingError, PolicyError) as exc:
+        # The resource or its policy is not in a state that can be enforced. A
+        # 409 rather than a 500: nothing is broken, and nothing will be written.
+        log_event("resource_not_enforceable", error=str(exc)[:300], level="WARN")
+        return _reply(409, {"outcome": "refused", "reason": str(exc)[:300],
+                            "binding": binding.name, "run_id": run_id})
     except Exception as exc:  # noqa: BLE001
         log_event("unhandled", error=f"{type(exc).__name__}: {exc}", level="ERROR")
         return _reply(500, {"error": "internal error"})
 
     publish_metrics(metrics_from_result(result), arm="gateway")
 
+    state = seen["state"]
     out = {
         "outcome": result.outcome,
         "action": result.action,
@@ -322,16 +317,34 @@ def handler(event, context):  # noqa: ANN001 - AWS signature
         "reason_calls": result.reason_calls,
         "attempts": result.attempts_made,
         "refusals": result.refusals,
-        "inferred_ceiling": ceiling_seen["value"],
-        "policy_memory_ids": ceiling_seen["ids"],
+        "binding": binding.name,
+        "resource": binding.resource,
+        "hard_limit": state.hard_limit if state else None,
+        # Kept under its old name as well: the field is in CloudWatch dashboards
+        # and in `deploy/invoke.py`. It now carries the COMPILED limit, so a
+        # reader who has both sees the same number from a different mechanism.
+        "inferred_ceiling": state.policy_limit if state else None,
         "dsn_source": _DSN_SOURCE,
         "run_id": run_id,
     }
+    if state is not None:
+        out.update(state.as_dict())
+        out["still_permitted"] = [f"allocate({a})"
+                                  for a in state.permitted(binding.actions)]
+
+    # A policy that cannot authorize is reported as a refusal even when the
+    # agent abstained rather than proposing something. Returning 200 "abstained"
+    # would let a caller read "nothing to do here" from what is actually
+    # "this account is unenforceable and needs attention".
+    if state is not None and not state.authorizes and result.outcome != "committed":
+        out["outcome"] = "refused"
+        out["reason"] = state.detail
+        return _reply(409, out)
     if result.outcome == "refused":
         out["reason"] = result.error
         out["refused_actions"] = list(result.refused_actions)
         # 409, not 500. The system worked: a write was stopped because it
-        # violated a policy the agent itself had inferred. That is a business
+        # violated the compiled policy the agent is held to. That is a business
         # outcome to be handled, not a fault to be retried.
         return _reply(409, out)
     if result.outcome == "error":
@@ -354,6 +367,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="invoke the gateway locally")
     ap.add_argument("--account", default="hero-001")
     ap.add_argument("--agent", default="local-agent")
+    ap.add_argument("--binding", default=DEFAULT_BINDING,
+                    help="which bindings/<name>.yaml resource to enforce")
     args = ap.parse_args()
     print(json.dumps(handler({"body": json.dumps(
-        {"account_id": args.account, "agent_id": args.agent})}, None), indent=2))
+        {"account_id": args.account, "agent_id": args.agent,
+         "binding": args.binding})}, None), indent=2))

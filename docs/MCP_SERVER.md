@@ -1,5 +1,14 @@
 # RaceLab as an MCP server
 
+> **This is one of two MCP documents, and they point in opposite directions.**
+> Here, RaceLab is an MCP **server**: any agent gains a write it cannot use to
+> break its own policy. For RaceLab as an MCP **client** — inspecting this
+> experiment through CockroachDB Cloud's Managed MCP Server — see
+> [`MCP.md`](MCP.md).
+>
+> The first inspects the experiment. The second *is* the experiment's result,
+> made callable.
+
 Point any MCP client at this and the agent gains a write it **cannot use to
 violate the policy it retrieved itself** — no library import, no framework, no
 change to how the agent is built. Works with Claude Code, Cursor, VS Code, and
@@ -65,13 +74,25 @@ returns it as a first-class result — not a failure, but a *teaching* response:
   "why": "another transaction changed the state your decision rested on; nothing was written",
   "observed_when_you_decided": 0,
   "observed_now": 35,
-  "policy_when_you_decided": { "ceiling": 60, "source_memory": "mcp-policy-1" },
-  "policy_now": { "ceiling": 60, "source_memory": "mcp-policy-1", "changed_mid_flight": false },
+  "policy_when_you_decided": {
+    "total": 0, "hard_limit": 10000, "ceiling": 60, "binding_limit": 60,
+    "policy_status": "compiled", "policy_version": 1, "policy_limit": 60,
+    "policy_source_memory": "mcp-policy-1"
+  },
+  "policy_now": {
+    "total": 35, "hard_limit": 10000, "ceiling": 60, "binding_limit": 60,
+    "policy_status": "compiled", "policy_version": 1, "policy_limit": 60,
+    "policy_source_memory": "mcp-policy-1", "changed_mid_flight": false
+  },
   "your_previous_action": "allocate(35)",
   "still_permitted": ["allocate(45)", "allocate(40)"],
   "guidance": "allocate(35) was derived from a total of 0, which is now 35. Choose again from ['allocate(45)', 'allocate(40)'] or abstain, then call decide_and_write once more."
 }
 ```
+
+`changed_mid_flight` is true when the policy **version** moved between the
+agent's read and now — not merely when the number differs — so a recompilation
+that produced the same ceiling is not reported as a rule change.
 
 The server does **not** retry for you. That is deliberate: retrying here would
 replay the same amount, which is precisely the failure this project measures.
@@ -100,19 +121,40 @@ the wrong experiment. `scripts/test_mcp_server.py` now runs five independent MCP
 clients writing at once, which produces both:
 
 ```
-round 1: 5 concurrent writers -> {'committed': 2, 'reconsider': 3}
+round 1: 5 concurrent writers -> {'committed': 1, 'reconsider': 4}
 ```
 
-18/18 checks, driven as a real client over stdio.
+29/29 checks, driven as a real client over stdio.
+
+## Which rule is enforced
+
+The **compiled** one. `racelab/policy.py` turns a policy document into a
+structured constraint once, off the write path; `racelab/policy_gate.py` decides
+which version governs; this server enforces it inside the transaction. **No model
+runs during a write.**
+
+If there is no current enforceable constraint, `decide_and_write` refuses and
+names the state — `uncompiled`, `stale`, `unenforceable` or `mismatched`. All
+four mean *nothing will be authorized here*, and `stale` in particular is a state
+the previous dollar-figure regex could not have: writing a new policy document
+through `remember` makes the account unwritable until someone runs
+`scripts/compile_policies.py`, rather than silently enforcing whatever number
+appeared in the newest text.
+
+Every committed write reports the `policy_version` it was made under, and that
+version is recorded on the `decisions` row that `audit_decisions` returns.
+
+The Lambda gateway resolves policy through the same module. Two write paths with
+two readings of one rule would be worse than either.
 
 ## Honest scope
 
-This is a **reference server**, not a hardened product. `decide_and_write`
-implements the allocation shape this project measures — a summed ledger against a
-ceiling parsed from retrieved policy text. Generalising it means injecting your
-own read and apply, exactly as `ConflictAware` already requires: the library is
-the general form, and this server is the demonstration that the protocol survives
-being delivered as a tool.
+This is a **reference server**, not a hardened product. `decide_and_write` acts
+on one declared resource — `bindings/*.yaml`, see `racelab/binding.py` — which is
+how it reaches tables this repository contains no code for (`--binding refunds`).
+Anything beyond that shape means injecting your own read and apply, exactly as
+`ConflictAware` already requires: the library is the general form, and this
+server is the demonstration that the protocol survives being delivered as a tool.
 
 `racelab` is therefore both an MCP **client** (`scripts/mcp_query.py`, against
 CockroachDB Cloud's Managed MCP Server) and an MCP **server**. The first inspects

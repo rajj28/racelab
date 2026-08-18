@@ -1,14 +1,21 @@
 """Drive the RaceLab MCP server as a real client, and force a real conflict.
 
-Spawns the server over stdio, speaks JSON-RPC to it, and asserts the three
-outcomes that matter. The `reconsider` case is the reason this server exists, so
-it is produced by an actual competing transaction rather than simulated.
+Spawns the server over stdio, speaks JSON-RPC to it, and asserts the outcomes
+that matter. The `reconsider` case is the reason this server exists, so it is
+produced by an actual competing transaction rather than simulated.
 
-    committed     the write landed
-    refused       the agent's action violated the policy it retrieved
+    committed     the write landed, under a named policy version
+    refused       the action violated the compiled policy, OR the policy cannot
+                  be enforced at all and nothing may be written
     reconsider    another transaction moved the state; nothing was written, and
                   the response carries then-versus-now so the agent can decide
                   again
+
+Section 5 is the one added when the compiler was wired in: an agent that writes
+a NEW policy document has, by that act, made the account unwritable until
+someone compiles it. The old regex could not have that state -- it read whatever
+text was newest and produced a number -- so a policy change nobody noticed still
+produced confident enforcement of something.
 
 Run:  python scripts/test_mcp_server.py
 """
@@ -114,22 +121,41 @@ class StdioClient:
             pass
 
 
+POLICY_TEXT = (f"The authorization ceiling for this account is ${CEILING}. "
+               f"This is a cumulative total across all allocations, with no "
+               f"reset period.")
+
+
 def setup(seed: int) -> None:
-    """A fresh ledger and a policy stating the ceiling, in retrieved text."""
+    """A fresh ledger, a policy document, and that policy compiled.
+
+    The compile step is deliberate and separate. It is what the server does NOT
+    do at write time: interpretation happens once, here, in a model; enforcement
+    happens per write, in SQL, with no model in the loop.
+
+    The wording is also deliberate. "$60 per cycle" does not compile -- a cycle
+    can start on any day, so it is not a window the constraint language has --
+    and the compiler flags it rather than guessing. That is asserted in section
+    5 rather than worked around here.
+    """
     import datetime
+
+    from racelab.binding import ResourceBinding
     from racelab.embeddings import get_embedder
     from racelab.memory import MemoryStore
+    from racelab.policy import columns_of, compile_policy, store
+
     with connect("crdb") as conn:
         conn.execute("DELETE FROM allocations WHERE account_id = %s", (ACCOUNT,))
         conn.execute("DELETE FROM memories WHERE account_id = %s", (ACCOUNT,))
+        conn.execute("DELETE FROM policy_constraints WHERE account_id = %s", (ACCOUNT,))
         conn.execute(
             "INSERT INTO accounts (account_id, name, hard_limit) VALUES (%s,%s,%s) "
             "ON CONFLICT (account_id) DO UPDATE SET hard_limit = EXCLUDED.hard_limit",
             (ACCOUNT, ACCOUNT, HARD_LIMIT))
         MemoryStore(conn, get_embedder("titan")).add(
             memory_id="mcp-policy-1", account_id=ACCOUNT,
-            text=f"Authorization ceiling for this account is ${CEILING} per cycle.",
-            kind="policy",
+            text=POLICY_TEXT, kind="policy",
             created_at=datetime.datetime.now(datetime.timezone.utc)
             - datetime.timedelta(hours=1))
         if seed:
@@ -138,12 +164,63 @@ def setup(seed: int) -> None:
                 "VALUES (%s,%s,'seed',%s,'mcp-setup')",
                 (str(uuid.uuid4()), ACCOUNT, seed))
 
+        binding = ResourceBinding.named("allocations")
+        with conn.cursor() as cur:
+            cols = columns_of(cur, binding.resource)
+        constraint = compile_policy(POLICY_TEXT, schema_columns=cols,
+                                    source_memory_id="mcp-policy-1",
+                                    **binding.constraint_template())
+        if not constraint.enforceable:
+            raise SystemExit(
+                f"the test policy did not compile to an enforceable constraint: "
+                f"{constraint.unsupported}")
+        store(conn, ACCOUNT, constraint)
+
+
+def write_policy(memory_id: str, text: str) -> None:
+    """Write a NEW governing policy document, and deliberately not compile it."""
+    import datetime
+
+    from racelab.embeddings import get_embedder
+    from racelab.memory import MemoryStore
+    with connect("crdb") as conn:
+        MemoryStore(conn, get_embedder("titan")).add(
+            memory_id=memory_id, account_id=ACCOUNT, text=text, kind="policy",
+            supersedes="mcp-policy-1",
+            created_at=datetime.datetime.now(datetime.timezone.utc))
+
+
+def compile_current(memory_id: str, wording: str) -> None:
+    """Compile the governing document, as `scripts/compile_policies.py` does."""
+    from racelab.binding import ResourceBinding
+    from racelab.policy import columns_of, compile_policy, store
+    with connect("crdb") as conn:
+        binding = ResourceBinding.named("allocations")
+        with conn.cursor() as cur:
+            cols = columns_of(cur, binding.resource)
+        constraint = compile_policy(wording, schema_columns=cols,
+                                    source_memory_id=memory_id,
+                                    **binding.constraint_template())
+        if not constraint.enforceable:
+            raise SystemExit(f"resolution did not compile: {constraint.unsupported}")
+        store(conn, ACCOUNT, constraint)
+
 
 def total() -> int:
     with connect("crdb") as conn:
         return int(conn.execute(
             "SELECT COALESCE(SUM(amount),0) FROM allocations WHERE account_id=%s",
             (ACCOUNT,)).fetchone()[0])
+
+
+def decision_versions() -> set:
+    """The policy versions recorded against this account's committed decisions."""
+    with connect("crdb") as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT d.policy_version FROM decisions d "
+            "JOIN allocations a ON a.run_id = d.run_id "
+            "WHERE a.account_id = %s", (ACCOUNT,)).fetchall()
+    return {r[0] for r in rows}
 
 
 def main() -> int:
@@ -178,15 +255,22 @@ def main() -> int:
         check("the policy is retrievable", f"${CEILING}" in texts,
               f"{len(got.get('memories', []))} memories")
 
-        print("\n3. A write that fits commits")
+        print("\n3. A write that fits commits, under a named policy version")
         out = client.call("decide_and_write",
                           {"account_id": ACCOUNT, "amount": 45,
                            "agent_id": "agent-a"})
-        print(f"     status={out.get('status')} total_now={out.get('total_now')}")
+        print(f"     status={out.get('status')} total_now={out.get('total_now')} "
+              f"policy_version={out.get('policy_version')}")
         check("status is committed", out.get("status") == "committed", str(out)[:90])
         check("the ledger reflects it", total() == 45, f"${total()}")
+        check("the response names the policy version it committed under",
+              isinstance(out.get("policy_version"), int),
+              f"v{out.get('policy_version')}")
+        check("the decision row records that version",
+              decision_versions() == {out.get("policy_version")},
+              f"decisions.policy_version = {decision_versions()}")
 
-        print("\n4. A write that breaks the retrieved ceiling is refused")
+        print("\n4. A write that breaks the compiled ceiling is refused")
         out = client.call("decide_and_write",
                           {"account_id": ACCOUNT, "amount": 45,
                            "agent_id": "agent-b"})
@@ -195,10 +279,54 @@ def main() -> int:
         check("status is refused", out.get("status") == "refused", str(out)[:90])
         check("nothing was written", total() == 45, f"${total()} unchanged")
         check("the response names the ceiling", "60" in json.dumps(out))
+        check("the refusal cites the compiled policy, not a parsed dollar figure",
+              "policy limit" in json.dumps(out) or "policy v" in json.dumps(out),
+              str(out.get("why"))[:100])
         check("it tells the agent what would fit",
               "still_permitted" in out and "guidance" in out)
 
-        print("\n5. Genuine contention returns 'reconsider', not an error")
+        print("\n5. A policy that has moved and not been recompiled blocks writes")
+        print("   (the state the old dollar-figure regex could not have)")
+        write_policy("mcp-policy-2",
+                     "Authorization ceiling reduced to $40 per billing cycle, "
+                     "effective immediately, superseding the prior ceiling.")
+        out = client.call("decide_and_write",
+                          {"account_id": ACCOUNT, "amount": 35,
+                           "agent_id": "agent-c"})
+        print(f"     status={out.get('status')} "
+              f"policy_status={(out.get('policy_now') or {}).get('policy_status')}")
+        check("a superseding, uncompiled policy refuses the write",
+              out.get("status") == "refused", str(out)[:100])
+        check("it reports the reason as 'stale', not as a ceiling breach",
+              (out.get("policy_now") or {}).get("policy_status") == "stale",
+              str((out.get("policy_now") or {}).get("policy_status")))
+        check("nothing was written", total() == 45, f"${total()} unchanged")
+        check("it offers no alternative action, because none would be allowed",
+              out.get("still_permitted") == [], str(out.get("still_permitted")))
+        check("the guidance says to compile, not to retry",
+              "compile" in (out.get("guidance") or "").lower(),
+              str(out.get("guidance"))[:90])
+
+        # And the same document, compiled, is enforceable again -- so the refusal
+        # above is a missing compilation, not a dead end.
+        print("\n   after compiling it, the new ceiling is the one enforced")
+        compile_current("mcp-policy-2",
+                        "The authorization ceiling for this account is $40. This is "
+                        "a cumulative total across all allocations, with no reset "
+                        "period.")
+        out = client.call("decide_and_write",
+                          {"account_id": ACCOUNT, "amount": 35,
+                           "agent_id": "agent-d"})
+        check("the recompiled, lower ceiling now refuses a write that used to fit",
+              out.get("status") == "refused", str(out)[:100])
+        check("and it is enforced as a limit, not as a missing policy",
+              (out.get("policy_now") or {}).get("policy_status") == "compiled",
+              str((out.get("policy_now") or {}).get("policy_status")))
+        check("the version advanced with the policy",
+              (out.get("policy_now") or {}).get("policy_version") == 2,
+              f"v{(out.get('policy_now') or {}).get('policy_version')}")
+
+        print("\n6. Genuine contention returns 'reconsider', not an error")
         # Worth being precise about which case this is. A stale AGENT -- one that
         # recalled, thought, and called the tool after the total moved -- gets
         # `refused`, because the server reads current state and the agent's
@@ -296,7 +424,7 @@ def main() -> int:
             check("nothing was written for the reconsidered call",
                   "nothing was written" in (seen.get("why") or ""))
 
-        print("\n6. Read-only mode refuses writes")
+        print("\n7. Read-only mode refuses writes")
         ro = StdioClient([sys.executable, "-m",
                           "racelab.integrations.mcp_server"])
         try:

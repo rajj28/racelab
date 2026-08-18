@@ -35,6 +35,7 @@ Run:  python scripts/test_guardrail.py
 
 from __future__ import annotations
 
+import dataclasses
 import pathlib
 import sys
 import threading
@@ -163,6 +164,146 @@ def run_tier(*, re_reason: bool, constraint, obey_feedback: bool, seed: int = 20
     return result, final_sum(), calls["n"]
 
 
+# --------------------------------------------------------------------------
+# 5. the policy gate's states -- four of which refuse
+# --------------------------------------------------------------------------
+
+GATE_ACCOUNT = "gate-states-001"
+
+
+def _gate_state(*, document: str | None, constraint=None, account_row: bool = True):
+    """Put the account in one exact policy state and read the gate's verdict.
+
+    No model is involved: constraints are constructed, not compiled. What is
+    under test is the *resolution* -- which rule governs and when to refuse --
+    and pulling Bedrock in would make a safety check depend on AWS being
+    reachable.
+    """
+    import datetime
+
+    from racelab.binding import ResourceBinding
+    from racelab.policy import store
+    from racelab.policy_gate import PolicyGate
+
+    binding = ResourceBinding.named("allocations")
+    with connect("crdb") as conn:
+        conn.execute("DELETE FROM allocations WHERE account_id = %s", (GATE_ACCOUNT,))
+        conn.execute("DELETE FROM memories WHERE account_id = %s", (GATE_ACCOUNT,))
+        conn.execute("DELETE FROM policy_constraints WHERE account_id = %s",
+                     (GATE_ACCOUNT,))
+        conn.execute("DELETE FROM accounts WHERE account_id = %s", (GATE_ACCOUNT,))
+        if account_row:
+            conn.execute(
+                "INSERT INTO accounts (account_id, name, hard_limit) VALUES (%s,%s,%s)",
+                (GATE_ACCOUNT, GATE_ACCOUNT, 100))
+        if document is not None:
+            conn.execute(
+                "INSERT INTO memories (memory_id, account_id, text, kind, created_at) "
+                "VALUES (%s,%s,%s,'policy',%s)",
+                ("gate-doc-1", GATE_ACCOUNT, document,
+                 datetime.datetime.now(datetime.timezone.utc)))
+        if constraint is not None:
+            store(conn, GATE_ACCOUNT, constraint)
+
+        gate = PolicyGate(binding)
+        with conn.cursor() as cur:
+            return gate, gate.read(cur, GATE_ACCOUNT)
+
+
+def group_policy_states() -> None:
+    """The gate refuses in four states, and each has to be reachable.
+
+    Written because only `compiled`, `stale` and `mismatched` had assertions.
+    The rest were the parts of a fail-closed mechanism that nothing exercised --
+    and an unexercised refusal path is indistinguishable from one that quietly
+    authorizes, because both produce no errors.
+    """
+    from racelab.policy import Constraint, PolicyError
+    from racelab.policy_gate import PolicyStatus
+
+    print("\n5. The policy gate: five states, and four of them refuse")
+
+    enforceable = Constraint(limit=60, metric="sum", column="amount",
+                             resource="allocations", scope_column="account_id",
+                             source_memory_id="gate-doc-1", compiled_by="test")
+
+    # none -- no policy document at all. The hard limit is the only rule, and it
+    # still binds. This is the ONLY state where absence of policy allows a write.
+    _, state = _gate_state(document=None)
+    check("none: no document -> only the hard limit binds",
+          state.status is PolicyStatus.NONE and state.authorizes
+          and state.policy_limit is None and state.hard_limit == 100,
+          f"{state.status.value} hard={state.hard_limit}")
+
+    # uncompiled -- a rule exists and nothing has read it.
+    _, state = _gate_state(document="Ceiling is $60.")
+    check("uncompiled: a document with nothing compiled from it REFUSES",
+          state.status is PolicyStatus.UNCOMPILED and not state.authorizes,
+          state.detail[:80])
+    check("uncompiled: it offers no permitted action",
+          state.permitted([45, 40, 35]) == [], str(state.permitted([45, 40, 35])))
+    check("uncompiled: the refusal quotes the document that needs compiling",
+          state.as_dict().get("governing_text") == "Ceiling is $60.",
+          str(state.as_dict().get("governing_text")))
+
+    # unenforceable -- compiled, with clauses the language cannot express.
+    _, state = _gate_state(
+        document="Ceiling is $60 per billing cycle.",
+        constraint=Constraint(limit=60, column="amount", resource="allocations",
+                              scope_column="account_id",
+                              source_memory_id="gate-doc-1",
+                              unsupported=("per billing cycle",)))
+    check("unenforceable: compiled but inexpressible REFUSES",
+          state.status is PolicyStatus.UNENFORCEABLE and not state.authorizes,
+          state.detail[:80])
+    check("unenforceable: it does not fall back to the expressible part",
+          state.policy_limit is None, str(state.policy_limit))
+
+    # not_in_force -- a dated policy outside its window. This one AUTHORIZES,
+    # under the hard limit alone, and that is the correct reading: a rule that
+    # does not apply yet is not a rule that forbids everything.
+    _, state = _gate_state(
+        document="From 2099, the ceiling is $60.",
+        constraint=dataclasses.replace(enforceable, effective_from="2099-01-01"))
+    check("not_in_force: a future-dated policy allows, under the hard limit only",
+          state.status is PolicyStatus.NOT_IN_FORCE and state.authorizes
+          and state.policy_limit is None and state.binding_limit == 100,
+          f"{state.status.value} binding_limit={state.binding_limit}")
+
+    # compiled -- the happy path, and the stricter of the two limits binds.
+    gate, state = _gate_state(document="Ceiling is $60.", constraint=enforceable)
+    check("compiled: the stricter of policy and hard limit binds",
+          state.status is PolicyStatus.COMPILED and state.binding_limit == 60,
+          f"policy={state.policy_limit} hard={state.hard_limit} "
+          f"-> {state.binding_limit}")
+
+    # And the hard limit is checked in EVERY state, including refusing ones.
+    print("\n   the hard limit is checked first, in every state")
+    with connect("crdb") as conn:
+        conn.execute(
+            "INSERT INTO allocations (allocation_id, account_id, agent_id, amount, run_id) "
+            "VALUES (gen_random_uuid(), %s, 'seed', 150, 'gate-states')",
+            (GATE_ACCOUNT,))
+        with conn.cursor() as cur:
+            verdict = gate.check(cur, state)
+    check("a total over the hard limit is refused even under a valid policy",
+          verdict is not None and "hard limit" in verdict, str(verdict)[:90])
+
+    # An account with no row in the limit table has no limit. It must raise
+    # rather than invent one -- an unknown scope with an unbounded budget is the
+    # shape of every interesting incident.
+    print("\n   an unknown scope is refused, not given a default budget")
+    raised = False
+    try:
+        _gate_state(document=None, account_row=False)
+    except PolicyError:
+        raised = True
+    check("a scope with no hard-limit row raises instead of defaulting", raised)
+
+    with connect("crdb") as conn:
+        conn.execute("DELETE FROM allocations WHERE account_id = %s", (GATE_ACCOUNT,))
+
+
 def main() -> int:
     print("The guardrail: a constraint enforced inside the transaction")
     print("=" * 76)
@@ -212,6 +353,8 @@ def main() -> int:
     check("the ceiling still held", total <= CEILING, f"${total}")
     check("this is the guarantee: bad reasoning cannot commit a violating state",
           total <= CEILING and r.outcome == "refused")
+
+    group_policy_states()
 
     print("\n" + "=" * 76)
     failed = [x for x in _results if x[0] == FAIL]

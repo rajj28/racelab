@@ -143,19 +143,138 @@ def _clients(region: str):
     }
 
 
+# Every module the handler imports, transitively. Listed explicitly rather than
+# by globbing `racelab/`, so that adding a module with a heavy dependency cannot
+# quietly enlarge the deployment package -- but the list is VERIFIED against the
+# handler's real imports below, because an explicit list is exactly the kind of
+# thing that goes stale. It did: wiring in the policy compiler added three
+# imports and this list was not updated, which would have shipped a function that
+# ImportErrors on cold start.
+PACKAGE_MODULES = [
+    "racelab/__init__.py",
+    "racelab/conflict.py",
+    "racelab/db.py",
+    "racelab/policy.py",
+    "racelab/policy_gate.py",
+    "racelab/binding.py",
+    "racelab/integrations/__init__.py",
+    "racelab/integrations/aws.py",
+]
+
+
+# Run inside the extracted package, by a fresh interpreter that can see only the
+# package directory. Blocking `yaml` reproduces the Lambda layer, which carries
+# psycopg, certifi and python-dotenv and no YAML parser -- so a binding that can
+# only be read as YAML fails here rather than on a cold start in production.
+_SMOKE = """
+import sys
+class NoYaml:
+    def find_spec(self, name, path=None, target=None):
+        if name == "yaml" or name.startswith("yaml."):
+            raise ImportError("the Lambda layer has no PyYAML")
+        return None
+sys.meta_path.insert(0, NoYaml())
+
+import lambda_handler
+from racelab.binding import available, ResourceBinding
+names = available()
+assert names, "no bindings in the package"
+for n in names:
+    ResourceBinding.named(n)
+assert lambda_handler._gate(lambda_handler.DEFAULT_BINDING) is not None
+print("OK " + ",".join(names))
+"""
+
+
+def _verify_package(package: bytes) -> None:
+    """Import the packaged handler in a fresh interpreter, or fail the build.
+
+    Written after this list went stale exactly once: wiring the policy compiler
+    into the handler added three transitive imports and `PACKAGE_MODULES` was not
+    updated. Nothing here would have noticed -- the tests import from the repo,
+    where every module is present. The only thing that would have caught it is
+    the cold start, in production, on the deployed function.
+
+    So the check is the real condition rather than an approximation of it: unzip
+    what would be uploaded, put *only* that on the path, block the dependencies
+    the layer does not carry, and import. A source scan would miss the
+    transitive case entirely -- `binding.py` importing `policy.py` is not visible
+    anywhere in `lambda_handler.py`.
+    """
+    import subprocess
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with zipfile.ZipFile(io.BytesIO(package)) as z:
+            z.extractall(tmp)
+        env = dict(os.environ)
+        # Only the package. Not the repo, which has every module whether or not
+        # it was shipped -- that is precisely the confusion being ruled out.
+        env["PYTHONPATH"] = tmp
+        proc = subprocess.run([sys.executable, "-c", _SMOKE], cwd=tmp, env=env,
+                              capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0:
+        raise SystemExit(
+            "the deployment package does not import on its own:\n"
+            + (proc.stderr or proc.stdout).strip()[-1200:]
+            + "\n\nAdd the missing module to PACKAGE_MODULES in deploy/deploy.py, "
+              "or the missing dependency to the layer.")
+    print(f"  package verified in a clean interpreter: {proc.stdout.strip()}")
+
+
 def build_package() -> bytes:
-    """Zip the handler plus the parts of racelab it imports.
+    """Zip the handler, the racelab modules it imports, and the bindings.
 
     Dependencies (psycopg, boto3) are expected from a layer or the runtime;
     boto3 ships with Lambda, psycopg needs a layer. `--layer` names one.
+
+    **Bindings are converted to JSON here.** They are authored as YAML because a
+    spec someone edits should be readable, but the Lambda layer has no PyYAML and
+    rebuilding it to add one would be a lot of ceremony for a flat mapping.
+    `ResourceBinding.load` already prefers `.yaml` and falls back to `.json`, so
+    the deployed function finds the JSON copy and never imports a YAML parser.
+    The conversion goes through `ResourceBinding`, so a binding that does not
+    parse fails the build rather than the cold start.
     """
+    import json as _json
+
+    from racelab.binding import BINDINGS_DIR, ResourceBinding, available
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         z.write(REPO / "deploy" / "lambda_handler.py", "lambda_handler.py")
-        for rel in ["racelab/__init__.py", "racelab/conflict.py", "racelab/db.py",
-                    "racelab/integrations/__init__.py", "racelab/integrations/aws.py"]:
+        for rel in PACKAGE_MODULES:
             z.write(REPO / rel, rel)
-    return buf.getvalue()
+
+        names = available()
+        if not names:
+            raise SystemExit(
+                f"no bindings found in {BINDINGS_DIR}; the gateway enforces a "
+                f"declared resource and has nothing to enforce")
+        for name in names:
+            source = ResourceBinding.load(BINDINGS_DIR / name)   # parses or raises
+            raw = _read_spec(BINDINGS_DIR, name)
+            z.writestr(f"bindings/{name}.json", _json.dumps(raw, indent=1))
+            print(f"  packaged binding {name}: {source.describe()}")
+
+    package = buf.getvalue()
+    _verify_package(package)
+    return package
+
+
+def _read_spec(directory, name: str) -> dict:
+    """The binding's raw mapping, whatever file format it was written in."""
+    import json as _json
+    for suffix in (".yaml", ".yml", ".json"):
+        path = directory / f"{name}{suffix}"
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if suffix == ".json":
+            return _json.loads(text)
+        import yaml
+        return yaml.safe_load(text)
+    raise SystemExit(f"binding {name!r} vanished between listing and reading")
 
 
 def check(region: str) -> int:

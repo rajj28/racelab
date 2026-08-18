@@ -1323,3 +1323,140 @@ a violating state.
 The guarantee is orthogonal to re-reasoning. A naive agent with a constraint
 declines rather than violating; re-reasoning turns "safely refused" into
 "correctly committed". It buys throughput, not safety.
+
+---
+
+## 2026-08-18 — Entry 17: the compiler reached the write paths, and refused our own policy
+
+Entry-worthy because the change produced a result we did not want, and because
+the shape of the guarantee had to be restated afterwards.
+
+`racelab/policy.py` had existed and been tested for a session without being used
+by anything that writes. Both write paths — the Lambda gateway and the MCP server
+— still found their ceiling with `re.search(r"\$\s*(\d+)")` over retrieved text.
+Wiring the compiler in is `racelab/policy_gate.py`, which both paths now share so
+that two write paths cannot hold two readings of one rule.
+
+### Finding 1: our own hero policy is not enforceable, and the compiler is right
+
+Compiling the hero corpus, unchanged, returns `unenforceable` for **both**
+versions:
+
+```
+hero-m1  "$80 per billing cycle, pending completion of the quarterly review"
+         -> a billing cycle can start on any day; not calendar_month
+         -> "pending the quarterly review" has no end date to compile
+
+hero-m5  "reduced to $60 per billing cycle, effective immediately"
+         -> same window objection
+```
+
+The regex read those same sentences and produced a confident `$80` and `$60`.
+Both readings were wrong in a way nothing could have surfaced: the cap is real,
+and the *period* it applies over was invented by the reader.
+
+This was not anticipated. The compiler's refusal to equate "per billing cycle"
+with `calendar_month` was already an assertion in `test_policy_compiler.py`
+(Entry 16's companion finding), but the corpus was written long before the
+compiler existed and nobody had run one against the other.
+
+**What we did not do about it.** The corpus text was not edited. Rewording
+`hero-m1` and `hero-m5` would change the embedded text, hence retrieval, hence
+potentially the sweep — trading a published result for a smoother demo. Instead
+`scripts/compile_policies.py --resolve` records an operator's reading of an
+ambiguous policy: compiled like any other policy text, stored as the next
+version, keyed to the document it interprets, and attributed to the user who ran
+it. It is not a bypass — an unenforceable resolution is still unenforceable —
+it is the audit trail for a human judgment that was previously being made
+implicitly, by a regular expression, on every single write.
+
+**What would have falsified the finding:** if either hero policy had compiled to
+an enforceable constraint, there would be no ambiguity to report and `--resolve`
+would not need to exist.
+
+### Finding 2: two policy states that the regex could not have
+
+The gate has five states and four of them refuse. Two are new in kind rather
+than in degree:
+
+- `uncompiled` — a policy document governs and nothing has been compiled from it.
+- `stale` — a constraint exists, but the document that governs is not the one it
+  was compiled from. Legal rewrote the rule; nobody recompiled.
+
+The regex could not be in either state, because it re-read the text on every
+request and always produced a number. A policy change nobody noticed still
+yielded confident enforcement of *something*. Refusing is the honest answer and
+it fails in the direction of not spending money. Asserted in
+`test_mcp_server.py` section 5: writing a superseding policy document makes the
+account unwritable — `policy_status: "stale"`, `still_permitted: []`, and
+guidance that says to compile rather than to retry — and compiling it makes the
+new, lower ceiling the one enforced.
+
+A related decision: the enforced constraint is the one compiled from **the
+document in force**, not the newest version row. Keyed on recency instead, a
+reverted policy would leave the newest version in charge of a document it never
+read.
+
+### Finding 3: the falsification check failed to fail, and the claim was too strong
+
+`scripts/test_property_concurrency.py` generates agent counts, action spaces,
+both limits, policy-change timing and arrival stagger, and asserts three
+properties. Following this project's own standard — *a check that cannot fail is
+not a check* — the guardrail was removed to confirm P1 (the hard limit is never
+exceeded) could actually be violated.
+
+**It could not.** A conflict-aware agent with no guardrail at all held the
+invariant.
+
+That is not a defect in the check. It is the C-ops result appearing from a
+different direction: an agent that re-reads operational state inside the
+transaction and re-decides never breaks the hard limit (0/50 in the controlled
+sweep). The guardrail is load-bearing for a **naive** agent, which reasons once
+and replays. Measured, same six agents, same interleavings, `$60` limit:
+
+| Configuration | Committed total |
+|---|---|
+| conflict-aware, no guardrail | `$45` — held |
+| **naive, no guardrail** | **`$270` — P1 violated** |
+| naive, with guardrail | `$45` — held |
+
+So the precise claim is *the guardrail is what protects you from a replaying
+agent*, not the looser "the guardrail keeps the invariant" — which is what we
+would have written, and which the falsification check caught before we did. All
+three rows are now assertions in the suite.
+
+### Finding 4: a second resource found a bug that one resource could not
+
+`racelab/binding.py` makes the enforced resource a declaration
+(`bindings/*.yaml`) rather than SQL written into the handler. Pointing the
+unmodified gateway at a `refunds` table immediately produced a wrong action: it
+took the *smallest* action that fit, not the largest.
+
+The handler had always taken the first action that fit. That was greedy purely
+because `allocations` happens to list `[45, 40, 35]` descending. A binding
+listing its actions ascending produces a minimal agent from the same code, under
+the same name, with no error anywhere — and the entire published finding is
+about a *greedy* agent filling to the cap it remembers.
+
+Nothing in the allocation scenario could have exposed this, because there was
+only ever one ordering. The fix is one `sorted(..., reverse=True)`; the lesson is
+that a constant promoted to configuration takes its accidental properties with
+it.
+
+### P3 is stated in the weaker form on purpose
+
+The third property is *a committed total never exceeds the highest ceiling that
+was ever in force*, not *never exceeds the current ceiling*. The stronger version
+is false and this project has published that it is false: no protocol can revoke
+a valid commit, and an agent that legally committed under an `$80` ceiling has
+not misbehaved when the ceiling later drops to `$60`. Asserting the stronger
+property would be asserting something we know to be untrue in order to have a
+better-sounding test.
+
+### Scope of this entry
+
+None of the sweep numbers move. `scenario/decide.py` — the reference agent whose
+ceiling inference is the *independent variable* of the experiment — still infers
+its ceiling from retrieved text with the same regex, deliberately: it models an
+agent reading a document, which is the thing under study. What changed is what
+the **enforcement** path does, which was never part of the measured comparison.

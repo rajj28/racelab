@@ -56,14 +56,27 @@ Writes are **off by default**. `--allow-writes` enables `decide_and_write` and
 
 Or via `.mcp.json` (see `docs/MCP_SERVER.md`).
 
+## Which rule is enforced
+
+The compiled one. `racelab/policy.py` turns a policy document into a structured
+constraint once, off the write path; `racelab/policy_gate.py` decides which
+version governs; this server enforces it inside the transaction. **No model runs
+during a write.** If there is no current enforceable constraint, the tool refuses
+and names which of the five policy states it is in -- `uncompiled`, `stale`,
+`unenforceable` and `mismatched` all mean "nothing will be authorized here", and
+each is a condition the old dollar-figure regex could not have detected at all.
+
+The gateway (`deploy/lambda_handler.py`) resolves policy through the same module.
+Two write paths with two readings of the same rule would be worse than either.
+
 ## Honest scope
 
-This is a **reference server**, not a hardened product. `decide_and_write`
-implements the allocation shape this project measures: a summed ledger against a
-ceiling parsed from retrieved policy text. Generalising it means injecting your
-own read and apply, exactly as `ConflictAware` already requires -- the library is
-the general form, and this is the demonstration that the protocol survives being
-delivered as a tool.
+This is a **reference server**, not a hardened product. `decide_and_write` acts
+on one declared resource (`bindings/*.yaml`, see `racelab/binding.py`), which is
+how it reaches tables this repository contains no code for. Anything beyond that
+shape means injecting your own read and apply, exactly as `ConflictAware` already
+requires -- the library is the general form, and this is the demonstration that
+the protocol survives being delivered as a tool.
 """
 
 from __future__ import annotations
@@ -71,7 +84,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import sys
 import uuid
 
@@ -85,13 +97,22 @@ except ImportError as exc:  # pragma: no cover
 
 import psycopg
 
-from ..conflict import ConflictAware, DecisionContext
+from ..binding import ResourceBinding
+from ..conflict import ConflictAware, DecisionContext, SqlTelemetry
 from ..db import dsn_for
-
-OPTIONS = (45, 40, 35)
-CEILING_PATTERN = re.compile(r"\$\s*(\d+)")
+from ..policy_gate import PolicyGate
 
 ALLOW_WRITES = False
+BINDING_NAME = os.environ.get("RACELAB_BINDING", "allocations")
+
+_GATE: PolicyGate | None = None
+
+
+def _gate() -> PolicyGate:
+    global _GATE
+    if _GATE is None:
+        _GATE = PolicyGate(ResourceBinding.named(BINDING_NAME))
+    return _GATE
 
 
 # --------------------------------------------------------------------------
@@ -103,51 +124,17 @@ def _connect():
     return psycopg.connect(dsn_for("crdb"), autocommit=True, connect_timeout=10)
 
 
-READ_STATE = """
-WITH total AS (
-    SELECT COALESCE(SUM(amount), 0) AS t
-    FROM allocations WHERE account_id = %(acct)s
-), pol AS (
-    SELECT array_agg(memory_id ORDER BY created_at DESC) AS ids,
-           array_agg(text ORDER BY created_at DESC) AS texts,
-           max(created_at) AS newest
-    FROM (
-        SELECT memory_id, text, created_at FROM memories
-        WHERE account_id = %(acct)s AND kind = 'policy'
-        ORDER BY created_at DESC LIMIT 4
-    ) s
-)
-SELECT total.t, pol.ids, pol.texts, pol.newest FROM total, pol
-"""
-
-
-def _read_state(cur, account_id: str) -> dict:
-    """Total and governing policy, from one statement so they share a timestamp."""
-    cur.execute(READ_STATE, {"acct": account_id})
-    row = cur.fetchone()
-    ids = list(row[1] or [])
-    texts = list(row[2] or [])
-    ceiling, source = None, None
-    for mid, text in zip(ids, texts):
-        found = CEILING_PATTERN.search(text or "")
-        if found:
-            ceiling, source = int(found.group(1)), mid
-            break
-    return {
-        "total": int(row[0] or 0),
-        "ceiling": ceiling,
-        "ceiling_source": source,
-        "policy_ids": ids,
-        "policy_texts": texts,
-        "policy_newest_at": row[3].isoformat() if row[3] else None,
+def _state_dict(state) -> dict:
+    """The shape the tool responses speak in, from a GateState."""
+    out = {
+        "total": state.total,
+        "hard_limit": state.hard_limit,
+        "ceiling": state.policy_limit,
+        "binding_limit": state.binding_limit,
+        "authorizes": state.authorizes,
     }
-
-
-def _hard_limit(cur, account_id: str, fallback: int) -> int:
-    cur.execute("SELECT hard_limit FROM accounts WHERE account_id = %s",
-                (account_id,))
-    row = cur.fetchone()
-    return int(row[0]) if row else fallback
+    out.update(state.as_dict())
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -169,73 +156,87 @@ server = MCPServer(
 
 @server.tool(
     description=(
-        "Allocate against a shared budget, with the policy ceiling enforced "
+        "Write against a scoped budget, with the compiled policy enforced "
         "inside the transaction. Returns status 'committed', 'refused' (your "
-        "action violates the policy you retrieved), or 'reconsider' (the state "
-        "you reasoned about changed; decide again from the fresh values given)."
+        "action violates the policy in force, or the policy cannot be enforced "
+        "at all), or 'reconsider' (the state you reasoned about changed; decide "
+        "again from the fresh values given)."
     ),
 )
 def decide_and_write(account_id: str, amount: int,
                      agent_id: str = "mcp-agent") -> str:
-    """Attempt one guarded allocation of `amount` against `account_id`."""
+    """Attempt one guarded write of `amount` against `account_id`."""
     if not ALLOW_WRITES:
         return json.dumps({
             "status": "forbidden",
             "why": "this server was started read-only; restart with --allow-writes",
         }, indent=1)
-    if amount not in OPTIONS:
+    gate = _gate()
+    binding = gate.binding
+    if amount not in binding.actions:
         return json.dumps({
             "status": "invalid",
-            "why": f"amount must be one of {list(OPTIONS)}",
-            "permitted": list(OPTIONS),
+            "why": f"amount must be one of {list(binding.actions)}",
+            "permitted": list(binding.actions),
         }, indent=1)
 
     run_id = f"mcp-{uuid.uuid4().hex[:8]}"
-    seen: dict = {}
+    seen: dict = {"state": None}
     # What the agent's decision rested on, captured on the FIRST read so a
     # reconsider response can show then-versus-now rather than only now.
-    first: dict = {}
+    first: dict = {"state": None}
 
     class Proposal:
-        def __init__(self, amt: int):
+        def __init__(self, amt: int, policy_version: int | None):
             self.action = f"allocate({amt})"
             self.amount = amt
+            # Read off the proposal by SqlTelemetry, so a decision row records
+            # the policy version it was made under.
+            self.policy_version = policy_version
 
     def operational_read(cur) -> int:
-        state = _read_state(cur, account_id)
-        state["hard_limit"] = _hard_limit(cur, account_id, 100)
-        seen.clear()
-        seen.update(state)
-        if not first:
-            first.update(state)
-        return state["total"]
+        # No fallback hard limit. A scope with no row in the limit table has no
+        # limit, and the gate raises rather than inventing one: a mistyped
+        # account_id must not be handed a budget out of nowhere.
+        state = gate.read(cur, account_id)
+        seen["state"] = state
+        if first["state"] is None:
+            first["state"] = state
+        return state.total
 
     def reason(ctx: DecisionContext) -> Proposal:
-        return Proposal(amount)
+        return Proposal(amount, seen["state"].version)
 
     def apply(cur, proposal) -> bool:
-        cur.execute(
-            "INSERT INTO allocations (allocation_id, account_id, agent_id, amount, run_id) "
-            "VALUES (%s,%s,%s,%s,%s)",
-            (str(uuid.uuid4()), account_id, agent_id, proposal.amount, run_id))
+        binding.insert(cur, scope=account_id, agent_id=agent_id,
+                       amount=proposal.amount, run_id=run_id)
         return True
 
     def constraint(cur, proposal) -> str | None:
-        cur.execute("SELECT COALESCE(SUM(amount),0) FROM allocations "
-                    "WHERE account_id = %s", (account_id,))
-        total = int(cur.fetchone()[0])
-        if total > seen.get("hard_limit", 100):
-            return (f"total would be ${total}, over the hard limit of "
-                    f"${seen.get('hard_limit')}")
-        ceiling = seen.get("ceiling")
-        if ceiling is not None and total > ceiling:
-            return (f"total would be ${total}, over the ${ceiling} policy ceiling "
-                    f"from {seen.get('ceiling_source')}")
-        return None
+        return gate.check(cur, seen["state"])
 
     conn = _connect()
+    # Telemetry gets its OWN connection, in autocommit, and never the raced one.
+    # Rows describing a failed attempt written inside the transaction that failed
+    # would be rolled back by the very conflict they record -- so the decisions
+    # that are most worth having would be exactly the ones that never survive.
+    # `SqlTelemetry` refuses a non-autocommit connection for this reason.
+    #
+    # This is also what makes `audit_decisions` mean anything: before it was
+    # added, the server answered that tool from a table its own writes never
+    # reached. An audit surface that is empty because nothing wrote to it looks
+    # identical to one that is empty because nothing happened.
+    telemetry, audit_note = None, None
+    try:
+        telemetry = SqlTelemetry(_connect())
+    except Exception as exc:  # noqa: BLE001
+        # An audit outage is not a correctness outage, and conflating them would
+        # mean a logging failure could stop a write the policy allows. But it is
+        # not swallowed either: the response says the decision went unrecorded.
+        audit_note = f"decision not recorded: {type(exc).__name__}: {exc}"[:200]
     try:
         wrapper = ConflictAware(
+            telemetry=telemetry,
             operational_read=operational_read,
             apply=apply,
             reason=reason,
@@ -253,81 +254,122 @@ def decide_and_write(account_id: str, amount: int,
         return json.dumps({"status": "error",
                            "why": f"{type(exc).__name__}: {exc}"}, indent=1)
     finally:
-        try:
-            conn.close()
-        except Exception:  # noqa: BLE001
-            pass
+        for handle in (conn, getattr(telemetry, "conn", None)):
+            try:
+                if handle is not None:
+                    handle.close()
+            except Exception:  # noqa: BLE001
+                pass
 
-    fresh = _fresh_state(account_id)
+    try:
+        fresh = _fresh_state(account_id)
+    except Exception as exc:  # noqa: BLE001
+        # Describing what happened must not itself become an unhandled error --
+        # the write has already landed or not, and that outcome is the answer.
+        return json.dumps({
+            "status": "committed" if result.outcome == "committed" else "error",
+            "action": result.action,
+            "why": f"could not re-read state to describe the outcome: {exc}"[:200],
+            "run_id": run_id,
+        }, indent=1)
+    fits = _still_fit(fresh)
+    now = _state_dict(fresh)
+    then = _state_dict(first["state"]) if first["state"] is not None else {}
 
     if result.outcome == "committed":
         return json.dumps({
             "status": "committed",
             "action": result.action,
-            "total_now": fresh["total"],
-            "ceiling": fresh["ceiling"],
+            "total_now": fresh.total,
+            "ceiling": fresh.policy_limit,
+            # The version the write was actually made under, taken from the read
+            # inside the transaction rather than from `fresh` -- the policy could
+            # have moved in the moment since the commit, and reporting the
+            # current version as the one enforced would be a small lie in exactly
+            # the situation this project exists to be careful about.
+            "policy_version": (first["state"].version
+                               if first["state"] is not None else None),
             "run_id": run_id,
+            **({"audit": audit_note} if audit_note else {}),
+        }, indent=1)
+
+    # A policy that cannot be enforced blocks every action, so there is no
+    # "choose something smaller" to offer. Reporting it as an ordinary ceiling
+    # breach would send the agent into a retry loop against a rule that is not
+    # going to admit anything until a person recompiles it.
+    if not fresh.authorizes:
+        return json.dumps({
+            "status": "refused",
+            "why": fresh.detail,
+            "your_action": f"allocate({amount})",
+            "total_now": fresh.total,
+            "policy_now": now,
+            "still_permitted": [],
+            "guidance": ("nothing was written, and nothing will be authorized "
+                         "against this account until its policy is compiled and "
+                         "enforceable. This is not something to retry: it needs "
+                         "scripts/compile_policies.py, or a policy document that "
+                         "the constraint language can express."),
         }, indent=1)
 
     if result.refusals:
-        # The agent's own policy forbade it. Not a conflict -- a judgment error.
+        # The compiled policy forbade it. Not a conflict -- a judgment error.
         return json.dumps({
             "status": "refused",
             "why": result.error,
             "your_action": f"allocate({amount})",
-            "total_now": fresh["total"],
-            "policy_now": {"ceiling": fresh["ceiling"],
-                           "source_memory": fresh["ceiling_source"]},
-            "still_permitted": _still_fit(fresh),
+            "total_now": fresh.total,
+            "policy_now": now,
+            "still_permitted": fits,
             "guidance": ("your action was not written. Choose one of "
-                         f"{_still_fit(fresh)} or abstain."),
+                         f"{fits} or abstain."),
         }, indent=1)
 
     # A serialization failure. THIS is the response MCP has no vocabulary for.
-    moved = (first.get("ceiling") is not None
-             and fresh.get("ceiling") is not None
-             and first["ceiling"] != fresh["ceiling"])
+    moved = (first["state"] is not None
+             and (first["state"].policy_limit != fresh.policy_limit
+                  or first["state"].version != fresh.version))
     return json.dumps({
         "status": "reconsider",
         "why": ("another transaction changed the state your decision rested on; "
                 "nothing was written"),
-        "observed_when_you_decided": first.get("total"),
-        "observed_now": fresh["total"],
-        "policy_when_you_decided": {"ceiling": first.get("ceiling"),
-                                    "source_memory": first.get("ceiling_source")},
-        "policy_now": {"ceiling": fresh["ceiling"],
-                       "source_memory": fresh["ceiling_source"],
-                       "changed_mid_flight": moved},
+        "observed_when_you_decided": then.get("total"),
+        "observed_now": fresh.total,
+        "policy_when_you_decided": then,
+        "policy_now": {**now, "changed_mid_flight": moved},
         "your_previous_action": f"allocate({amount})",
-        "still_permitted": _still_fit(fresh),
+        "still_permitted": fits,
         "guidance": (
             f"allocate({amount}) was derived from a total of "
-            f"{first.get('total')}, which is now {fresh['total']}. "
-            + ("The policy ceiling also changed while you were deciding. "
+            f"{then.get('total')}, which is now {fresh.total}. "
+            + ("The policy in force also changed while you were deciding "
+               f"(v{then.get('policy_version')} -> v{fresh.version}). "
                if moved else "")
-            + f"Choose again from {_still_fit(fresh)} or abstain, then call "
+            + f"Choose again from {fits} or abstain, then call "
               f"decide_and_write once more."),
     }, indent=1)
 
 
-def _fresh_state(account_id: str) -> dict:
+def _fresh_state(account_id: str):
+    """Read the gate's view of the world again, outside any transaction.
+
+    Only ever used to *describe* what happened to an agent whose write did not
+    land. It is deliberately not what anything is enforced against -- that
+    happens inside the transaction, in `constraint`, and reading it here for
+    enforcement would be exactly the racy advisory check this server exists to
+    argue against.
+    """
     conn = _connect()
     try:
         with conn.cursor() as cur:
-            state = _read_state(cur, account_id)
-            state["hard_limit"] = _hard_limit(cur, account_id, 100)
-            return state
+            return _gate().read(cur, account_id)
     finally:
         conn.close()
 
 
-def _still_fit(state: dict) -> list[str]:
+def _still_fit(state) -> list[str]:
     """Which actions would satisfy the constraint as it stands right now."""
-    binding = state.get("hard_limit", 100)
-    if state.get("ceiling") is not None:
-        binding = min(binding, state["ceiling"])
-    remaining = binding - state.get("total", 0)
-    return [f"allocate({a})" for a in OPTIONS if a <= remaining]
+    return [f"allocate({a})" for a in state.permitted(_gate().binding.actions)]
 
 
 @server.tool(
@@ -359,8 +401,12 @@ def recall(account_id: str, query: str, k: int = 4) -> str:
 
 @server.tool(
     description=("Write a fact or policy into this account's agentic memory. "
-                 "A 'policy' kind stating a dollar ceiling becomes enforceable "
-                 "by decide_and_write immediately."),
+                 "A 'policy' kind becomes the governing document immediately, "
+                 "which means decide_and_write will REFUSE every write against "
+                 "this account until the new policy is compiled -- a rule that "
+                 "has not been compiled is a rule nothing can be checked "
+                 "against, and enforcing the superseded version would enforce a "
+                 "policy that has been withdrawn."),
 )
 def remember(account_id: str, text: str, kind: str = "note",
              memory_id: str | None = None, supersedes: str | None = None) -> str:
@@ -380,9 +426,16 @@ def remember(account_id: str, text: str, kind: str = "note",
             memory_id=memory_id or f"mcp-{uuid.uuid4().hex[:8]}",
             account_id=account_id, text=text, kind=kind, supersedes=supersedes,
             created_at=datetime.datetime.now(datetime.timezone.utc))
-        return json.dumps({"status": "stored", "kind": kind,
-                           "effective": "immediately, for any agent that recalls"},
-                          indent=1)
+        out = {"status": "stored", "kind": kind,
+               "effective": "immediately, for any agent that recalls"}
+        if kind == "policy":
+            out["enforcement"] = (
+                "this is now the governing policy document. It is NOT yet "
+                "enforceable: run `python scripts/compile_policies.py --account "
+                f"{account_id}` to compile it. Until then decide_and_write "
+                "refuses every write against this account with policy_status "
+                "'stale' or 'uncompiled'.")
+        return json.dumps(out, indent=1)
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"status": "error",
                            "why": f"{type(exc).__name__}: {exc}"}, indent=1)
@@ -403,7 +456,7 @@ def audit_decisions(account_id: str | None = None, limit: int = 20) -> str:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT run_id, agent_id, attempt_no, observed_sum, "
-                "inferred_ceiling, decision_after, revised "
+                "inferred_ceiling, decision_after, revised, policy_version "
                 "FROM decisions ORDER BY created_at DESC LIMIT %s",
                 (min(limit, 100),))
             rows = cur.fetchall()
@@ -411,8 +464,11 @@ def audit_decisions(account_id: str | None = None, limit: int = 20) -> str:
             "decisions": [{
                 "run_id": r[0], "agent_id": r[1], "attempt_no": r[2],
                 "observed_sum": r[3], "inferred_ceiling": r[4],
-                "action": r[5], "revised": r[6],
+                "action": r[5], "revised": r[6], "policy_version": r[7],
             } for r in rows],
+            "note": ("policy_version answers 'which decisions were made under "
+                     "the old cap?'. A NULL means no compiled constraint "
+                     "governed that decision."),
         }, indent=1, default=str)
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"status": "error",
@@ -422,20 +478,23 @@ def audit_decisions(account_id: str | None = None, limit: int = 20) -> str:
 
 
 def main() -> int:
-    global ALLOW_WRITES
+    global ALLOW_WRITES, BINDING_NAME
     ap = argparse.ArgumentParser(description="RaceLab MCP server")
     ap.add_argument("--allow-writes", action="store_true",
                     help="enable decide_and_write and remember")
+    ap.add_argument("--binding", default=BINDING_NAME,
+                    help="which bindings/<name>.yaml resource to enforce")
     ap.add_argument("--transport", default="stdio",
                     choices=["stdio", "sse", "streamable-http"])
     args = ap.parse_args()
     ALLOW_WRITES = args.allow_writes
+    BINDING_NAME = args.binding
 
     # stderr, never stdout: stdout IS the protocol channel on stdio transport,
     # and a stray print there corrupts the session.
     print(f"racelab mcp server: writes "
-          f"{'ENABLED' if ALLOW_WRITES else 'disabled (read-only)'}",
-          file=sys.stderr)
+          f"{'ENABLED' if ALLOW_WRITES else 'disabled (read-only)'}; "
+          f"binding {BINDING_NAME}", file=sys.stderr)
     server.run(transport=args.transport)
     return 0
 
