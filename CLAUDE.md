@@ -396,7 +396,8 @@ including the three findings they produced. What follows is the remaining work.*
 - **Video** — script ready in `docs/VIDEO.md`, runbook in `docs/DEMO.md`. **The
   last hard requirement still outstanding.**
 - ~~**Upstream PR** to `cockroachlabs/cockroachdb-skills`~~ **DONE 2026-08-18.**
-  Issue #25 → PR #26. Working clone at `~/work/cockroachdb-skills` with
+  [Issue #25](https://github.com/cockroachlabs/cockroachdb-skills/issues/25) → [PR #26](https://github.com/cockroachlabs/cockroachdb-skills/pull/26).
+  Working clone at `~/work/cockroachdb-skills` with
   `upstream` remote configured. Note the branch convention is
   `add-skill/<domain-without-prefix>/<skill>` — *not* the
   `cockroachdb-`-prefixed form previously written here; the directory keeps the
