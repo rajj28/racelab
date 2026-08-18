@@ -198,6 +198,22 @@ distributed-sql, langchain, hypothesis, boto3, docker, postgresql, yaml
 
 ---
 
+## 5b · Image gallery
+
+All four images are in **`docs/thumbnails/`**, already cropped to 3:2 and named
+in upload order. See `docs/thumbnails/README.md` for what each one carries.
+
+| Order | File | Role |
+|---|---|---|
+| 1 | `1-hook-thumbnail.png` | **thumbnail** — readable down to 300px |
+| 2 | `2-architecture-transaction-boundary.png` | the mechanism |
+| 3 | `3-results-five-arms.png` | the evidence |
+| 4 | `4-memory-in-action.png` | CockroachDB memory, visibly |
+
+Every one is a real screenshot of the running project — no generated art.
+
+---
+
 ## 6 · Video demo link
 
 ⚠️ **YOU** — not yet recorded. Script is in `docs/VIDEO.md` (468 words, 2:50 at 165 wpm); shot-by-shot runbook in `docs/DEMO.md`.
