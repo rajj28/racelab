@@ -81,6 +81,27 @@ So we asked what happens when two agents draw from the same pool at the same mom
 
 Both read the pool as having room. Both grant. The pool is oversubscribed, **and the database raises no error at all** — because the rule is *"everything added up stays under the cap"*, which is a statement about many rows, so it cannot be a constraint on any single one. The database did exactly what it was asked. Nobody asked it this.
 
+### The simplest version of it
+
+One account. A budget of **$100**. Twenty agents, each wanting to approve **$45**.
+
+| | What the agent sees | What it decides |
+|---|---|---|
+| **Agent 1** | $0 spent, $100 left | approve $45 ✓ |
+| **Agent 2** | $0 spent, $100 left — *it read before agent 1 wrote* | approve $45 ✓ |
+| **Agent 3** | $0 spent, $100 left — *same* | approve $45 ✓ |
+
+All three writes land. The account sits at **$135 against a $100 budget**, and
+**every agent was right**, given what it saw. There is no bad decision to find
+here, no bug to fix in any one agent, and no error raised anywhere.
+
+That is three agents. Run all twenty and the total lands in the *hundreds* —
+across 50 runs it went over the cap **45 times**, every one of them silently.
+
+That is the whole problem in one table: correct agents, a correct database, and a
+broken outcome. Swap dollars for seats, GPU hours or stock and nothing about it
+changes.
+
 The obvious fix is stronger isolation. We tried it, and found something more interesting: it isn't enough on its own.
 
 ## What it does
