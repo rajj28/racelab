@@ -12,6 +12,7 @@ the 5 MB per-file cap.
 | 2 | `2-architecture-transaction-boundary.png` | 1800×1200 · 411 KB | The mechanism: one transaction, one statement reading all four inputs, and the `40001 → re-decide (not replay)` loop |
 | 3 | `3-results-five-arms.png` | 1200×800 · 416 KB | The evidence: five approaches, `$450 / $540 / $225` in red, `$80` half-red, **`$45` all green** |
 | 4 | `4-memory-in-action.png` | 1200×800 · 360 KB | CockroachDB memory visibly at work — the real `memories` rows, one superseded and struck through, one flagged as arriving mid-run |
+| 5 | `5-demo-animation-3x2.gif` | 900×600 · 154 KB | The animation. `docs/demo.gif` was 900×520 (1.73:1); padded to 3:2 with its own background rather than cropped, because a centre-crop cuts the `$110` / `$100` figures the animation exists to show |
 
 ## Why #1 is the thumbnail
 
