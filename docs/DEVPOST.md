@@ -275,7 +275,8 @@ distributed-sql, langchain, hypothesis, boto3, docker, postgresql, yaml
 
 | Label | URL |
 |---|---|
-| Live demo (interactive, no login) | `https://rajj28.github.io/racelab/` |
+| **Live demo — race it yourself** | `https://racelab.fly.dev` |
+| Static demo (works offline) | `https://rajj28.github.io/racelab/` |
 | Source code | `https://github.com/rajj28/racelab` |
 | Architecture | `https://github.com/rajj28/racelab/blob/main/docs/ARCHITECTURE.md` |
 | Methodology log (every prediction, graded) | `https://github.com/rajj28/racelab/blob/main/docs/METHODOLOGY.md` |
@@ -315,15 +316,36 @@ Must be **public or unlisted**, playable without a login, **under 3 minutes**. U
 ## URL to your functional demo application
 
 ```
-https://rajj28.github.io/racelab/
+https://racelab.fly.dev
 ```
+
+*(The static, offline-capable version is at <https://rajj28.github.io/racelab/> — use that one if the live app is ever down.)*
 
 ## Testing credentials or instructions
 
 ```
-No credentials needed for the demo application.
+No credentials needed. Nothing to install. Open it and press Race.
 
-The demo at https://rajj28.github.io/racelab/ is fully self-contained -- every
+https://racelab.fly.dev runs a REAL race: pick one of the four approaches, choose how
+many agents and how tightly they arrive, and twenty-agent-style contention plays
+out live against the same CockroachDB Cloud cluster every published number came
+from. Each agent opens its own connection; the collisions are real serialization
+failures; the rows land in a real table. Events stream to the browser over
+Server-Sent Events as they happen.
+
+Try this order, it takes ninety seconds:
+  1. "Told, and ignores it"  -> goes hundreds of dollars over a $100 budget
+  2. "Works it out again"    -> budget holds, the policy cap does not
+  3. "Works it out and re-reads the notes" -> both hold
+Set the arrival window to 0 ms for a thundering herd.
+
+It races `demo-live-001`, an account seeded for this purpose and reset before
+every run -- never the account the published measurements used, so a visitor
+cannot corrupt the evidence. Runs are serialised (the cluster's connection
+budget is ~30 and each race holds one per agent), so if someone else is racing
+you get a clear "another race is running" rather than a failure.
+
+The static demo at https://rajj28.github.io/racelab/ is fully self-contained -- every
 number on the page came back from a live CockroachDB Cloud cluster and a local
 PostgreSQL 16 instance, captured by scripts/capture_ui.py and embedded in the
 page. It has no external requests and works offline. Pick any of the five

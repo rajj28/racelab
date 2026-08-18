@@ -142,3 +142,8 @@ unaided.
 | MCP audit connection unavailable | the write proceeds, and the response says the decision went unrecorded |
 | Model returns an out-of-space action | re-asked with the violation named; **never** silently replaced |
 | Concurrency exceeds the plan's budget | preflight refuses to start the swarm |
+
+---
+
+Watch this run: **<https://racelab.fly.dev>** races real agents against the real
+cluster and streams every event above as it happens.

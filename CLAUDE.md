@@ -66,7 +66,7 @@ $8,750 · 1st $5,000 + blog feature · 2nd $2,500 · 3rd $1,250
 | ≥2 CockroachDB tools, actually used | ✅ **3 of 4** (below) |
 | ≥1 AWS service | ✅ **5** (below) |
 | Public repo + detectable OSS license | ✅ MIT, detected in About |
-| **URL to a functional demo app** | ✅ https://rajj28.github.io/racelab/ (Pages `built`) |
+| **URL to a functional demo app** | ✅ **https://racelab.fly.dev** — live, races the real cluster. Static fallback: https://rajj28.github.io/racelab/ |
 | **Video <3 min, public on YouTube/Vimeo** | ❌ **MISSING — user is doing this.** Script: `docs/VIDEO.md` (462 words, 2:48 at 165 wpm). Runbook: `docs/DEMO.md` |
 | Identify CockroachDB tools + how | ✅ README "The stack" section |
 | Identify AWS services + how | ✅ same section |
@@ -218,6 +218,7 @@ Account **946298554578**, IAM user `ruturajsonkamble`.
 
 | Resource | Value |
 |---|---|
+| **Live demo app** | **https://racelab.fly.dev** — Fly.io, region `sin`, one machine, app `racelab` |
 | Lambda | `racelab-gateway` in **ap-south-1** |
 | Function URL | `https://3fbyij2xhlcb2cyjwlusfd6fza0bymsg.lambda-url.ap-south-1.on.aws/` |
 | URL auth | **`AWS_IAM`** — unsigned `curl` gets 403 by design |
