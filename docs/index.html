@@ -570,6 +570,579 @@
     </div>
   </section>
 
+  <section id="try">
+    <h2>Now you try it</h2>
+    <p>
+      Everything above is a recording. This is not — it runs in your browser,
+      right now, with the same rules the real system follows.
+      <strong>Pick how the agents should behave when they collide, and watch
+      what the account ends up at.</strong>
+    </p>
+
+    <div class="sim">
+      <div class="sim-controls">
+        <div class="ctl">
+          <span class="ctl-label">When two agents collide, the loser should…</span>
+          <div class="seg" id="sim-strategy" role="group" aria-label="Strategy">
+            <button type="button" data-s="retry"   class="on">try the same answer again</button>
+            <button type="button" data-s="redecide">work it out again</button>
+            <button type="button" data-s="memory">work it out <em>and</em> re-read the notes</button>
+          </div>
+        </div>
+
+        <div class="ctl-row">
+          <label class="ctl slider">
+            <span class="ctl-label">Agents <b id="sim-n-out">8</b></span>
+            <input type="range" id="sim-n" min="3" max="20" value="8" step="1">
+          </label>
+
+          <label class="ctl check">
+            <input type="checkbox" id="sim-policy" checked>
+            <span>Someone lowers the cap to $60 halfway through</span>
+          </label>
+
+          <button type="button" class="run" id="sim-run">Run it</button>
+        </div>
+      </div>
+
+      <div class="sim-stage">
+        <div class="sim-readout">
+          <div class="sim-total">
+            <span class="sim-total-n" id="sim-total">$0</span>
+            <span class="sim-total-l">approved so far</span>
+          </div>
+          <div class="sim-verdict" id="sim-verdict">Press <b>Run it</b>.</div>
+        </div>
+
+        <div class="sim-bar-host">
+          <div class="sim-bar" id="sim-bar">
+            <div class="sim-fill" id="sim-fill"></div>
+            <div class="sim-cap" id="sim-cap"><span>cap $80</span></div>
+            <div class="sim-limit"><span>budget $100</span></div>
+          </div>
+          <div class="sim-scale"><span>$0</span><span id="sim-scale-max">$200</span></div>
+        </div>
+
+        <svg id="sim-lanes" class="sim-lanes" role="img"
+             aria-label="One row per agent, showing when it read, thought and wrote."></svg>
+
+        <div class="sim-legend">
+          <span><i class="k read"></i>read the balance</span>
+          <span><i class="k think"></i>thinking</span>
+          <span><i class="k ok"></i>wrote</span>
+          <span><i class="k clash"></i>collided — someone wrote first</span>
+        </div>
+
+        <div class="sim-log" id="sim-log" aria-live="polite"></div>
+      </div>
+
+      <p class="sim-note">
+        A faithful model of the protocol, not a replay of the measurements — it
+        runs the same read → think → write cycle, the same collision rule, and
+        the same three responses to a collision. The measured results from 250
+        real runs are further down the page, and they are what any claim here
+        rests on.
+      </p>
+    </div>
+  </section>
+
+<style>
+  /* The interactive model. Uses the page's own tokens so it reads as part of
+     the document rather than a widget dropped into it. */
+  .sim { margin-top: 26px; }
+
+  .sim-controls {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+  }
+  .ctl { display: block; }
+  .ctl-label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 9px;
+  }
+  .ctl-label b { color: var(--ink); font-size: 12px; }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 8px; }
+  .seg button {
+    flex: 1 1 190px;
+    font: inherit;
+    font-size: 13.5px;
+    line-height: 1.35;
+    text-align: left;
+    padding: 11px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--hairline-2);
+    background: var(--bg);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: background .13s, border-color .13s, color .13s;
+  }
+  .seg button em { font-style: italic; }
+  .seg button:hover { border-color: var(--accent-line); color: var(--ink); }
+  .seg button.on {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--accent-line);
+  }
+
+  .ctl-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 22px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--hairline);
+  }
+  .ctl.slider { flex: 1 1 220px; }
+  .ctl.slider input { width: 100%; accent-color: var(--accent); cursor: pointer; }
+  .ctl.check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13.5px; color: var(--ink-2); cursor: pointer;
+    flex: 1 1 260px;
+  }
+  .ctl.check input { accent-color: var(--accent); cursor: pointer; }
+
+  .run {
+    font: inherit; font-weight: 600; font-size: 14px;
+    padding: 11px 26px; border-radius: 9px; cursor: pointer;
+    border: 1px solid var(--accent);
+    background: var(--accent); color: #fff;
+    transition: opacity .13s, transform .08s;
+  }
+  .run:hover { opacity: .9; }
+  .run:active { transform: translateY(1px); }
+  .run[disabled] { opacity: .5; cursor: default; }
+
+  .sim-stage {
+    margin-top: 14px;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+
+  .sim-readout {
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .sim-total-n {
+    font-family: var(--mono); font-size: 40px; font-weight: 700;
+    letter-spacing: -.02em; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .sim-total-n.over { color: var(--crit); }
+  .sim-total-n.held { color: var(--good); }
+  .sim-total-l {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-3); margin-left: 8px;
+  }
+  .sim-verdict { font-size: 14px; color: var(--ink-2); line-height: 1.5; flex: 1 1 260px; }
+  .sim-verdict b { color: var(--ink); }
+  .sim-verdict .bad { color: var(--crit); font-weight: 600; }
+  .sim-verdict .good { color: var(--good); font-weight: 600; }
+
+  .sim-bar-host { margin-bottom: 20px; }
+  .sim-bar {
+    position: relative; height: 46px;
+    background: var(--well);
+    border: 1px solid var(--hairline);
+    border-radius: 8px; overflow: hidden;
+  }
+  .sim-fill {
+    position: absolute; inset: 0 auto 0 0; width: 0;
+    background: var(--accent-soft);
+    border-right: 2px solid var(--accent);
+    transition: width .09s linear, background .2s, border-color .2s;
+  }
+  .sim-fill.over { background: var(--crit-soft); border-right-color: var(--crit); }
+  .sim-cap, .sim-limit {
+    position: absolute; top: 0; bottom: 0; width: 0;
+    border-left: 2px dashed var(--ink-3);
+  }
+  .sim-cap { border-left-color: var(--warn); transition: left .45s cubic-bezier(.4,0,.2,1); }
+  .sim-limit { border-left-color: var(--ink-2); border-left-style: solid; }
+  .sim-cap span, .sim-limit span {
+    position: absolute; top: 4px; left: 6px; white-space: nowrap;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
+    color: var(--warn); background: var(--surface);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  .sim-limit span { color: var(--ink-2); top: auto; bottom: 4px; }
+  .sim-scale {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); margin-top: 5px;
+  }
+
+  .sim-lanes { display: block; width: 100%; height: auto; }
+
+  .sim-legend {
+    display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--ink-3);
+  }
+  .sim-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .k { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .k.read  { background: var(--ink-3); }
+  .k.think { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-line); border-radius: 2px; }
+  .k.ok    { background: var(--good); }
+  .k.clash { background: var(--crit); }
+
+  .sim-log {
+    margin-top: 16px; padding: 12px 14px;
+    background: var(--well); border-radius: 8px;
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.75;
+    color: var(--ink-2); min-height: 84px;
+    max-height: 132px; overflow-y: auto;
+  }
+  .sim-log div { opacity: 0; animation: simIn .2s forwards; }
+  .sim-log .c { color: var(--crit); }
+  .sim-log .g { color: var(--good); }
+  .sim-log .w { color: var(--warn); }
+  @keyframes simIn { to { opacity: 1; } }
+
+  .sim-note {
+    font-size: 13px; color: var(--ink-3); line-height: 1.6;
+    margin-top: 14px; padding-left: 14px;
+    border-left: 2px solid var(--hairline-2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sim-fill, .sim-cap { transition: none; }
+    .sim-log div { animation: none; opacity: 1; }
+  }
+</style>
+
+<script>
+(function () {
+  "use strict";
+
+  var HARD = 100, CAP0 = 80, CAP1 = 60;
+  var ACTIONS = [45, 40, 35];
+  var WINDOW = 420, THINK = 130, MAX_TRIES = 6;
+
+  var el = function (id) { return document.getElementById(id); };
+  var strategy = "retry", playing = false, raf = null;
+
+  /* A seeded generator, so the same settings give the same run. A demo whose
+     numbers change every press invites the reading that they are decorative. */
+  function rng(seed) {
+    return function () {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+  }
+
+  function pick(observed, cap) {
+    var room = Math.min(cap, HARD) - observed;
+    for (var i = 0; i < ACTIONS.length; i++) {
+      if (ACTIONS[i] <= room) { return ACTIONS[i]; }
+    }
+    return null;                      // nothing fits: abstain
+  }
+
+  /* The model. One pass, no animation -- playback happens afterwards, so the
+     outcome is decided before anything is drawn and cannot drift with frame
+     rate. */
+  function simulate(n, strat, policyMoves) {
+    var rand = rng(n * 7919 + strat.length * 104729 + (policyMoves ? 13 : 71));
+    var changeAt = policyMoves ? Math.round(WINDOW * 0.45 + THINK) : Infinity;
+    var capAt = function (t) { return t >= changeAt ? CAP1 : CAP0; };
+
+    var commits = [];                 // {t, amount}
+    var totalAt = function (t) {
+      var s = 0;
+      for (var i = 0; i < commits.length; i++) { if (commits[i].t <= t) { s += commits[i].amount; } }
+      return s;
+    };
+
+    var agents = [], events = [];
+    for (var i = 0; i < n; i++) {
+      agents.push({
+        id: i + 1,
+        t: Math.round((i * WINDOW) / n + rand() * (WINDOW / n) * 0.8),
+        knownCap: CAP0, tries: 0, spans: [], done: false, amount: null, outcome: null
+      });
+    }
+    agents.sort(function (a, b) { return a.t - b.t; });
+
+    /* Process each agent's attempts in time order. Simultaneous work is what
+       creates the collisions, so attempts are resolved against whatever had
+       committed at that instant -- not against a running pointer. */
+    var pending = agents.slice(), guard = 0;
+    while (pending.length && guard++ < 400) {
+      pending.sort(function (a, b) { return a.t - b.t; });
+      var a = pending.shift();
+
+      var readT = a.t, observed = totalAt(readT);
+      if (a.tries === 0 || strat !== "retry") {
+        if (strat === "memory") { a.knownCap = capAt(readT); }
+        var next = pick(observed, a.knownCap);
+        if (a.tries > 0 && next !== a.amount) { a.revised = true; }
+        a.amount = next;
+      }
+      a.spans.push({ from: readT, to: readT + THINK, read: observed });
+      a.tries++;
+
+      var writeT = readT + THINK;
+      if (a.amount === null) {
+        a.outcome = "abstain";
+        events.push({ t: writeT, kind: "abstain", agent: a.id });
+        continue;
+      }
+
+      if (totalAt(writeT) !== observed) {           // someone committed meanwhile
+        events.push({ t: writeT, kind: "clash", agent: a.id, amount: a.amount });
+        a.spans[a.spans.length - 1].clash = true;
+        if (a.tries >= MAX_TRIES) {
+          a.outcome = "gaveup";
+          events.push({ t: writeT, kind: "gaveup", agent: a.id });
+          continue;
+        }
+        a.t = writeT + 8;                            // try again straight away
+        pending.push(a);
+        continue;
+      }
+
+      commits.push({ t: writeT, amount: a.amount });
+      a.outcome = "committed";
+      a.commitAt = writeT;
+      events.push({ t: writeT, kind: "commit", agent: a.id, amount: a.amount,
+                    total: totalAt(writeT) });
+    }
+
+    if (policyMoves) { events.push({ t: changeAt, kind: "policy" }); }
+    events.sort(function (x, y) { return x.t - y.t; });
+
+    var end = 0;
+    agents.forEach(function (g) {
+      g.spans.forEach(function (s) { end = Math.max(end, s.to); });
+    });
+
+    return {
+      agents: agents, events: events, end: end + 40,
+      total: totalAt(Infinity), changeAt: changeAt,
+      finalCap: policyMoves ? CAP1 : CAP0,
+      clashes: events.filter(function (e) { return e.kind === "clash"; }).length,
+      revised: agents.filter(function (g) { return g.revised; }).length
+    };
+  }
+
+  /* ---- drawing ---------------------------------------------------------- */
+
+  var NS = "http://www.w3.org/2000/svg";
+  function svg(name, attrs) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) { if (attrs[k] != null) { e.setAttribute(k, attrs[k]); } }
+    return e;
+  }
+  function css(v) {
+    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  }
+
+  function drawLanes(sim, now) {
+    var host = el("sim-lanes");
+    host.textContent = "";
+    var W = host.clientWidth || 700;
+    var rowH = 20, padL = 54, padR = 12, H = sim.agents.length * rowH + 14;
+    host.setAttribute("viewBox", "0 0 " + W + " " + H);
+    host.setAttribute("height", H);
+
+    var x = function (t) { return padL + (t / sim.end) * (W - padL - padR); };
+
+    sim.agents.forEach(function (a, i) {
+      var y = i * rowH + 12;
+      host.appendChild(svg("line", {
+        x1: padL, y1: y, x2: W - padR, y2: y,
+        stroke: css("--hairline"), "stroke-width": 1
+      }));
+      var lab = svg("text", { x: 8, y: y + 3.5, fill: css("--ink-3"),
+                              "font-family": css("--mono"), "font-size": 10 });
+      lab.textContent = "agent " + a.id;
+      host.appendChild(lab);
+
+      a.spans.forEach(function (s) {
+        if (s.from > now) { return; }
+        var to = Math.min(s.to, now);
+        host.appendChild(svg("rect", {
+          x: x(s.from), y: y - 5, width: Math.max(1, x(to) - x(s.from)), height: 10,
+          rx: 2, fill: css("--accent-soft"),
+          stroke: css("--accent-line"), "stroke-width": 1
+        }));
+        host.appendChild(svg("circle", { cx: x(s.from), cy: y, r: 2.6, fill: css("--ink-3") }));
+        if (s.clash && now >= s.to) {
+          host.appendChild(svg("path", {
+            d: "M" + (x(s.to) - 3.5) + " " + (y - 3.5) + "l7 7M" + (x(s.to) + 3.5) +
+               " " + (y - 3.5) + "l-7 7",
+            stroke: css("--crit"), "stroke-width": 1.8, "stroke-linecap": "round"
+          }));
+        }
+      });
+
+      if (a.outcome === "committed" && now >= a.commitAt) {
+        host.appendChild(svg("circle", {
+          cx: x(a.commitAt), cy: y, r: 4, fill: css("--good")
+        }));
+        var amt = svg("text", { x: x(a.commitAt) + 8, y: y + 3.5, fill: css("--good"),
+                                "font-family": css("--mono"), "font-size": 10 });
+        amt.textContent = "+" + a.amount;
+        host.appendChild(amt);
+      }
+    });
+
+    if (sim.changeAt < Infinity && now >= sim.changeAt) {
+      host.appendChild(svg("line", {
+        x1: x(sim.changeAt), y1: 2, x2: x(sim.changeAt), y2: H - 4,
+        stroke: css("--warn"), "stroke-width": 1.5, "stroke-dasharray": "3 3"
+      }));
+    }
+  }
+
+  function log(html, cls) {
+    var host = el("sim-log");
+    var d = document.createElement("div");
+    if (cls) { d.className = cls; }
+    d.innerHTML = html;
+    host.appendChild(d);
+    host.scrollTop = host.scrollHeight;
+  }
+
+  function render(sim, now, shown) {
+    var total = 0, cap = CAP0;
+    sim.events.forEach(function (e) {
+      if (e.t > now) { return; }
+      if (e.kind === "commit") { total = e.total; }
+      if (e.kind === "policy") { cap = CAP1; }
+    });
+
+    var max = Math.max(HARD * 2, sim.total * 1.12, cap * 1.6);
+    el("sim-scale-max").textContent = "$" + Math.round(max);
+    var pct = function (v) { return Math.min(100, (v / max) * 100) + "%"; };
+
+    var fill = el("sim-fill");
+    fill.style.width = pct(total);
+    fill.classList.toggle("over", total > HARD);
+    el("sim-cap").style.left = pct(cap);
+    el("sim-cap").querySelector("span").textContent = "cap $" + cap;
+    el("sim-limit").style.left = pct(HARD);
+
+    var n = el("sim-total");
+    n.textContent = "$" + total;
+    n.classList.toggle("over", total > HARD);
+    n.classList.toggle("held", now >= sim.end && total <= HARD);
+
+    /* stream the log in step with the playhead */
+    sim.events.forEach(function (e, i) {
+      if (e.t > now || shown[i]) { return; }
+      shown[i] = true;
+      if (e.kind === "policy") {
+        log("&#9888;  the cap is lowered to $60 &mdash; it changes in the notes, not in the data", "w");
+      } else if (e.kind === "clash") {
+        log("agent " + e.agent + " tried to write " + e.amount +
+            " &mdash; someone got there first", "c");
+      } else if (e.kind === "commit") {
+        log("agent " + e.agent + " wrote +" + e.amount + " &rarr; total $" + e.total, "g");
+      } else if (e.kind === "abstain") {
+        log("agent " + e.agent + " saw no room and wrote nothing");
+      } else if (e.kind === "gaveup") {
+        log("agent " + e.agent + " gave up after " + MAX_TRIES + " collisions", "c");
+      }
+    });
+
+    drawLanes(sim, now);
+  }
+
+  function verdict(sim) {
+    var overBudget = sim.total > HARD;
+    var overCap = sim.total > sim.finalCap;
+    var parts = [];
+
+    if (overBudget) {
+      parts.push("<span class='bad'>$" + sim.total + " against a $100 budget.</span> " +
+                 "Every agent read the balance correctly. Nothing raised an error.");
+    } else if (overCap) {
+      parts.push("<span class='good'>Inside the $100 budget</span>, but " +
+                 "<span class='bad'>past the $" + sim.finalCap + " cap</span> that was " +
+                 "in force by the end &mdash; the balance was never wrong, the rule moved.");
+    } else {
+      parts.push("<span class='good'>Inside the budget and inside the cap.</span> " +
+                 "The only way to get here is to re-read the notes as well as the balance.");
+    }
+    parts.push("<b>" + sim.clashes + "</b> collision" + (sim.clashes === 1 ? "" : "s") +
+               (strategy === "retry"
+                 ? ", every one answered by sending the same number again."
+                 : ", <b>" + sim.revised + "</b> of which changed the agent's mind."));
+    el("sim-verdict").innerHTML = parts.join(" ");
+  }
+
+  function run() {
+    if (playing) { return; }
+    playing = true;
+    el("sim-run").disabled = true;
+    el("sim-log").textContent = "";
+    el("sim-verdict").textContent = "running…";
+    el("sim-total").className = "sim-total-n";
+
+    var sim = simulate(+el("sim-n").value, strategy, el("sim-policy").checked);
+    var shown = [], t0 = null, DUR = 3600;
+
+    function frame(ts) {
+      if (t0 === null) { t0 = ts; }
+      var p = Math.min(1, (ts - t0) / DUR);
+      render(sim, p * sim.end, shown);
+      if (p < 1) { raf = requestAnimationFrame(frame); }
+      else {
+        playing = false;
+        el("sim-run").disabled = false;
+        verdict(sim);
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  /* ---- wiring ----------------------------------------------------------- */
+
+  el("sim-strategy").addEventListener("click", function (ev) {
+    var b = ev.target.closest("button");
+    if (!b) { return; }
+    [].forEach.call(this.querySelectorAll("button"), function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    strategy = b.dataset.s;
+    if (!playing) { run(); }
+  });
+  el("sim-n").addEventListener("input", function () { el("sim-n-out").textContent = this.value; });
+  el("sim-n").addEventListener("change", function () { if (!playing) { run(); } });
+  el("sim-policy").addEventListener("change", function () { if (!playing) { run(); } });
+  el("sim-run").addEventListener("click", run);
+
+  addEventListener("resize", function () {
+    if (!playing && el("sim-lanes").childNodes.length) {
+      var sim = simulate(+el("sim-n").value, strategy, el("sim-policy").checked);
+      drawLanes(sim, sim.end);
+    }
+  });
+
+  /* Run once when it first scrolls into view, so a judge sees it move without
+     having to work out that there is something to press. */
+  var fired = false;
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries, obs) {
+      if (entries[0].isIntersecting && !fired) { fired = true; run(); obs.disconnect(); }
+    }, { threshold: 0.35 }).observe(el("try"));
+  } else { run(); }
+})();
+</script>
+
   <section>
     <h2>Then it gets harder</h2>
     <p>

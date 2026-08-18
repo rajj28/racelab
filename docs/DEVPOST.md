@@ -116,7 +116,7 @@ Under `SERIALIZABLE`, the state you verified before committing is the state that
 
 ## The measurement
 
-Five arms, five arrival windows, 10 runs per cell, 20 agents per run — **250 runs and 5,000 agent decisions** on a live CockroachDB Cloud cluster. The scenario here is a shared spending pool, because it is the easiest to state in one line; the next section shows the same result in a completely different shape.
+Five arms, five arrival windows, 10 runs per cell, 20 agents per run — **250 runs and 5,000 agent decisions** on a live CockroachDB Cloud cluster. The scenario here is a shared spending pool, because it is the easiest to stte in one line; the next section shows the same result in a completely different shape.
 
 | Arm | | Over the cap | Policy limit breached | Conflicts raised |
 |---|---|---|---|---|
@@ -254,7 +254,7 @@ It is right both times. The regex read that same sentence and returned a confide
 
 Property-based coverage of the compiler itself; more binding shapes (time-windowed aggregates are partly in); and getting this in front of a real workload, because the honest weakness of this project is that the scenarios are still synthetic.
 
-The skill we wrote about this failure mode is submitted upstream to CockroachDB's own skills repository: [proposal issue](https://github.com/cockroachlabs/cockroachdb-skills/issues/25) and [pull request](https://github.com/cockroachlabs/cockroachdb-skills/pull/26).
+The skill we wrote about this failure mode is submitted upstream to `cockroachlabs/cockroachdb-skills` as PR #26.
 
 ---
 
@@ -387,7 +387,7 @@ https://github.com/rajj28/racelab/blob/main/LICENSE
 - [x] **ccloud CLI**
 - [x] **Agent Skills Repo**
 
-> **On the fourth box:** the first three are *consumed by* the project. The Agent Skills Repo is a **contribution back** — we authored a skill and submitted it upstream ([issue #25](https://github.com/cockroachlabs/cockroachdb-skills/issues/25) → [PR #26](https://github.com/cockroachlabs/cockroachdb-skills/pull/26)). The explanation below says so plainly. If you would rather claim only what the project *depends on*, untick it; three already exceeds the required two.
+> **On the fourth box:** the first three are *consumed by* the project. The Agent Skills Repo is a **contribution back** — we authored a skill and submitted it upstream (issue #25 → PR #26). The explanation below says so plainly. If you would rather claim only what the project *depends on*, untick it; three already exceeds the required two.
 
 ## Which AWS Services are used?
 
@@ -447,9 +447,7 @@ retry the unit of work (right), and together they mean the retry re-executes the
 write with the decision the model made against the PREVIOUS attempt's read. We
 wrote `retrying-agent-decisions-under-contention` for that gap, validated it at
 0 errors against the repository's own scripts/validate-spec.py, and submitted it
-upstream:
-  https://github.com/cockroachlabs/cockroachdb-skills/issues/25
-  https://github.com/cockroachlabs/cockroachdb-skills/pull/26
+upstream: issue #25 -> PR #26 on cockroachlabs/cockroachdb-skills.
 
 WE ARE ALSO AN MCP SERVER. racelab/integrations/mcp_server.py gives Claude Code,
 Cursor, or any MCP client a guarded write it cannot use to violate the policy it

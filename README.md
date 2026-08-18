@@ -4,7 +4,8 @@
 
 | | |
 |---|---|
-| **Live demo** | **<https://rajj28.github.io/racelab/>** — interactive, self-contained, works offline |
+| **Live demo — race it yourself** | **<https://racelab.fly.dev>** — pick an approach, race real agents against the real CockroachDB cluster, watch it stream |
+| **Static demo** | <https://rajj28.github.io/racelab/> — the recorded run, self-contained, works offline |
 | **Deployed gateway** | `https://3fbyij2xhlcb2cyjwlusfd6fza0bymsg.lambda-url.ap-south-1.on.aws/` — `AWS_IAM` auth, so an unsigned request gets `403` **by design**; call it with `python deploy/invoke.py` |
 | **Run it yourself** | [Quickstart](#quickstart) — a CockroachDB connection string is the only hard requirement |
 | **Tests** | 12 suites, `python scripts/test_all.py` |

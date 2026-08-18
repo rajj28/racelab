@@ -35,3 +35,9 @@ data/
 # deploy/deploy.py documents the command. Vendored dependencies in a repo are
 # noise for a reader and drift from what is actually deployed.
 build/
+
+# The live demo app. `node_modules` is reinstallable from package.json and
+# `dist` is a build artefact that the Dockerfile regenerates -- committing
+# either would add tens of thousands of files a reader has to scroll past.
+app/node_modules/
+app/dist/
